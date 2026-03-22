@@ -1,130 +1,4 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE MAGA PRO | FIX RECONNECT & CLEAR</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap');
-        body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center;}
-        
-        /* SCREEN LAYOUT */
-        #game-ui { display: none; width: 100vw; height: 100vh; flex-direction: row; padding: 20px; gap: 20px; }
-        #board-section { flex: 1; position: relative; background: #0f172a; border-radius: 20px; border: 6px solid #f8fafc; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        #control-section { width: 320px; display: flex; flex-direction: column; gap: 20px; }
-
-        /* BOARD & SUPER CLEAR GRID */
-        #board-container { position: relative; width: 100%; height: 100%; background: #020617;}
-        #board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); width: 100%; height: 100%; }
-        
-        /* PETAK SUPER JELAS */
-        .cell { border: 2px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #eab308; position: relative; }
-        .cell span { text-shadow: 0 0 10px rgba(0,0,0,0.8); } /* Shadow buat nomor */
-        .cell:nth-child(odd) { background: #0f172a; }
-        .cell:nth-child(even) { background: #020617; }
-
-        /* SVG OVERLAY & VISUALS PROPER */
-        .svg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        
-        /* DESAIN TANGGA HD (GRADIENT TALI) */
-        .ladder-group path { stroke: #b45309; stroke-width: 8; fill: none; opacity: 0.7; stroke-linecap: round; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
-        .ladder-group line { stroke: #fcd34d; stroke-width: 4; opacity: 0.7; }
-
-        /* DESAIN ULAR HD (Glowing Berapi) */
-        .snake-group path { stroke: #ef4444; stroke-width: 12; fill: none; opacity: 0.7; stroke-linecap: round; filter: drop-shadow(0 0 10px #ef4444); animation: snake-pulse 2s infinite; }
-        .snake-head { fill: #ef4444; filter: drop-shadow(0 0 5px #ef4444); }
-        @keyframes snake-pulse { 0%, 100% { opacity: 0.5; stroke-width: 11; } 50% { opacity: 0.8; stroke-width: 13; } }
-
-        /* PION MUKA JUMBO */
-        .pawn { width: 65px; height: 65px; position: absolute; z-index: 50; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); background-size: cover; background-position: center; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.7); }
-        .pawn.finished { opacity: 0.3; filter: grayscale(1); border-color: #94a3b8; }
-        .pawn-label { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 900; white-space: nowrap; }
-
-        /* DADU 3D ANIMATED (PROPER) */
-        .dice-area { background: #1e293b; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; align-items: center; border: 2px solid #334155;}
-        .dice-view { width: 110px; height: 110px; perspective: 1000px; margin: 20px 0; cursor: pointer;}
-        .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s ease-out; }
-        .cube-face { position: absolute; width: 110px; height: 110px; background: #fff; border: 5px solid #cbd5e1; border-radius: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 14px;}
-        .dot { background: #1e293b; border-radius: 50%; width: 18px; height: 18px; align-self: center; justify-self: center; visibility: hidden; }
-        .dot.show { visibility: visible; }
-        
-        .front  { transform: rotateY(  0deg) translateZ(55px); }
-        .back   { transform: rotateY(180deg) translateZ(55px); }
-        .right  { transform: rotateY( 90deg) translateZ(55px); }
-        .left   { transform: rotateY(-90deg) translateZ(55px); }
-        .top    { transform: rotateX( 90deg) translateZ(55px); }
-        .bottom { transform: rotateX(-90deg) translateZ(55px); }
-
-        .cube-rolling { animation: roll-3d 0.2s infinite linear; }
-        @keyframes roll-3d { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(360deg); } }
-
-        /* CHAT & STATUS */
-        #status-area { background: #1e293b; border-radius: 20px; padding: 15px; border: 2px solid #334155;}
-        #chat-area { flex: 1; background: #1e293b; border-radius: 20px; padding: 15px; border: 2px solid #334155; display: flex; flex-direction: column;}
-        #chat-box { flex: 1; overflow-y: auto; font-size: 13px; margin-bottom: 10px; }
-        #chat-box::-webkit-scrollbar { width: 0px; }
-
-    </style>
-</head>
-<body>
-
-<div id="setup-screen" class="fixed inset-0 bg-[#020617] z-[1000] flex flex-col items-center justify-center p-6">
-    <h1 class="text-7xl font-black italic text-yellow-500 mb-2 tracking-tighter drop-shadow-2xl">SNAKE <span class="text-white">MAGA</span></h1>
-    <p class="text-[10px] text-slate-500 mb-10 tracking-[0.5em] font-bold uppercase">Fix Reconnect & Clear HD</p>
-    <div class="w-full max-w-sm space-y-4">
-        <input id="room-input" type="text" placeholder="KODE ROOM UTAMA (SQUAD)" class="w-full bg-slate-900 p-5 rounded-2xl border border-slate-700 text-center font-black text-yellow-500 uppercase text-2xl outline-none focus:border-yellow-500 shadow-inner">
-        <div id="name-selector" class="grid grid-cols-3 gap-2"></div>
-        <button onclick="handleEntry('join')" class="w-full bg-yellow-600 py-5 rounded-2xl font-black uppercase text-white shadow-xl hover:scale-105 active:scale-95 transition-all">GAS BATTLE</button>
-    </div>
-</div>
-
-<div id="game-ui">
-    <div id="board-section">
-        <div id="board-container">
-            <svg id="svg-connections" class="svg-overlay"></svg>
-            <div id="board"></div>
-        </div>
-    </div>
-
-    <div id="control-section">
-        <div id="status-area">
-            <div class="bg-slate-950 p-2 flex justify-between items-center rounded-lg border border-white/5 text-[9px] font-bold uppercase mb-2">
-                <div>🏆 LAST: <span id="last-winner" class="text-yellow-500">-</span></div>
-                <div>👑 MOST: <span id="most-winner" class="text-green-500">-</span></div>
-            </div>
-            <p id="status-text" class="text-xs font-black text-yellow-400 uppercase tracking-widest leading-tight">Menghubungkan...</p>
-        </div>
-
-        <div id="dice-area" class="dice-area" style="display: none;">
-            <p class="text-[10px] font-bold text-slate-400 uppercase">Klik Dadu buat Kocok</p>
-            <div class="dice-view" onclick="handleRoll()">
-                <div id="cube" class="cube">
-                    <div class="cube-face front"><div class="dot show" style="grid-area: 2/2"></div></div>
-                    <div class="cube-face back"><div class="dot show"></div><div class="dot show" style="grid-area: 3/3"></div></div>
-                    <div class="cube-face right"><div class="dot show"></div><div class="dot show" style="grid-area: 2/2"></div><div class="dot show" style="grid-area: 3/3"></div></div>
-                    <div class="cube-face left"><div class="dot show"></div><div class="dot show" style="grid-area: 1/3"></div><div class="dot show" style="grid-area: 3/1"></div><div class="dot show" style="grid-area: 3/3"></div></div>
-                    <div class="cube-face top"><div class="dot show"></div><div class="dot show" style="grid-area: 1/3"></div><div class="dot show" style="grid-area: 2/2"></div><div class="dot show" style="grid-area: 3/1"></div><div class="dot show" style="grid-area: 3/3"></div></div>
-                    <div class="cube-face bottom"><div class="dot show"></div><div class="dot show" style="grid-area: 1/3"></div><div class="dot show" style="grid-area: 2/1"></div><div class="dot show" style="grid-area: 2/3"></div><div class="dot show" style="grid-area: 3/1"></div><div class="dot show" style="grid-area: 3/3"></div></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="chat-area">
-            <div id="chat-box"></div>
-            <div class="flex gap-1">
-                <input id="chat-input" type="text" placeholder="Bacot..." class="flex-1 bg-slate-800 rounded-lg px-3 py-2 text-xs outline-none border border-slate-700" onkeypress="if(event.key==='Enter') sendMessage()">
-                <button onclick="sendEmote('😂')" class="bg-slate-800 p-2 rounded-lg text-sm">😂</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // FIREBASE CONFIG (RULES OPEN)
+// FIREBASE CONFIG (PAKE PUNYA LO YANG LAMA)
     const firebaseConfig = {
         apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
         authDomain: "ulartanggasquad.firebaseapp.com",
@@ -132,8 +6,7 @@
         projectId: "ulartanggasquad",
         storageBucket: "ulartanggasquad.firebasestorage.app",
         messagingSenderId: "492517449717",
-        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc",
-        measurementId: "G-QQY0R81JJ6"
+        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -142,9 +15,8 @@
     const jumps = { 2:38, 7:14, 8:31, 15:26, 21:42, 36:44, 51:67, 71:91, 78:98, 16:6, 46:25, 49:11, 62:19, 64:60, 74:53, 89:68, 95:75, 99:80 };
     
     let myName = '', roomCode = '';
-    let isRolling = false; // Mencegah klik dadu dobel
+    let isLocalRolling = false; 
 
-    // UI Pilih Nama
     const selector = document.getElementById('name-selector');
     squad.forEach(n => {
         const b = document.createElement('button'); b.innerText = n;
@@ -157,24 +29,19 @@
         selector.appendChild(b);
     });
 
-    function handleEntry(type) {
+    function handleEntry() {
         roomCode = document.getElementById('room-input').value.toUpperCase() || 'SQUAD';
         if (!roomCode || !myName) return alert("Pilih Karakter & Isi Kode Room!");
-
-        const ref = db.ref('rooms/' + roomCode);
-        ref.once('value', s => {
+        db.ref('rooms/' + roomCode).once('value', s => {
             let d = s.val();
-            // FIX RECONNECTION: Cek apakah nama udah ada di players
             if (!d) {
-                // Room baru
-                ref.set({ players: [{ name: myName, pos: 1, img: `${myName.toLowerCase()}.png`, finished: false }], turnIndex: 0, moving: false, lastRoll: 1 }).then(startGame);
+                db.ref('rooms/' + roomCode).set({ players: [{ name: myName, pos: 1, img: `${myName.toLowerCase()}.png`, finished: false }], turnIndex: 0, moving: false, lastRoll: 1 }).then(startGame);
             } else {
-                // Join room (Sistem otomatis reconnect kalau nama sama)
                 let pList = d.players || [];
                 if (!pList.find(p => p.name === myName)) {
                     pList.push({ name: myName, pos: 1, img: `${myName.toLowerCase()}.png`, finished: false });
                 }
-                ref.update({ players: pList }).then(startGame);
+                db.ref('rooms/' + roomCode).update({ players: pList }).then(startGame);
             }
         });
     }
@@ -182,8 +49,7 @@
     function startGame() {
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('game-ui').style.display = 'flex';
-        initBoard(); syncGame(); syncStats();
-        drawDice(1); // Set awal
+        initBoard(); syncGame();
     }
 
     function initBoard() {
@@ -196,191 +62,122 @@
                 b.appendChild(cell);
             }
         }
-        setTimeout(drawConnections, 500); // Gambar visual HD
+        setTimeout(drawConnections, 500);
     }
 
-    // FUNGSI VISUAL ULAR & TANGGA PROPER (Optimal No Lag)
     function drawConnections() {
-        const svg = document.getElementById('svg-connections'); svg.innerHTML = ''; // Clear
+        const svg = document.getElementById('svg-connections'); svg.innerHTML = '';
         const bRect = document.getElementById('board-container').getBoundingClientRect();
-
         Object.keys(jumps).forEach(sKey => {
             const start = parseInt(sKey); const end = jumps[start];
             const sEl = document.getElementById(`cell-${start}`).getBoundingClientRect();
             const eEl = document.getElementById(`cell-${end}`).getBoundingClientRect();
-            
-            const x1 = sEl.left - bRect.left + sEl.width/2;
-            const y1 = sEl.top - bRect.top + sEl.height/2;
-            const x2 = eEl.left - bRect.left + eEl.width/2;
-            const y2 = eEl.top - bRect.top + eEl.height/2;
-
+            const x1 = sEl.left - bRect.left + sEl.width/2; const y1 = sEl.top - bRect.top + sEl.height/2;
+            const x2 = eEl.left - bRect.left + eEl.width/2; const y2 = eEl.top - bRect.top + eEl.height/2;
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             if (end > start) {
-                // DESAIN TANGGA HD (Gradient Coklat Kayu)
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("class", "ladder-group");
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                const dx = x2 - x1; const dy = y2 - y1; const off = 10;
-                path.setAttribute("d", `M${x1-off},${y1} L${x2-off},${y2} M${x1+off},${y1} L${x2+off},${y2}`);
+                g.setAttribute("class", "ladder-group");
+                path.setAttribute("d", `M${x1-10},${y1} L${x2-10},${y2} M${x1+10},${y1} L${x2+10},${y2}`);
                 g.appendChild(path);
-                // Gambar anak tangga solid
-                const steps = 6;
-                for (let i = 1; i < steps; i++) {
-                    const lx = x1 + dx * (i/steps); const ly = y1 + dy * (i/steps);
+                for (let i = 1; i < 6; i++) {
+                    const lx = x1 + (x2-x1)*(i/6); const ly = y1 + (y2-y1)*(i/6);
                     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    line.setAttribute("x1", lx-off-2); line.setAttribute("y1", ly); line.setAttribute("x2", lx+off+2); line.setAttribute("y2", ly); g.appendChild(line);
+                    line.setAttribute("x1", lx-12); line.setAttribute("y1", ly); line.setAttribute("x2", lx+12); line.setAttribute("y2", ly); g.appendChild(line);
                 }
-                svg.appendChild(g);
             } else {
-                // DESAIN ULAR HD (Zigzag Glowing Berapi)
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("class", "snake-group");
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                const curveAmt = 60; // Seberapa zigzag ularnya
-                path.setAttribute("d", `M${x1},${y1} Q${(x1+x2)/2 + curveAmt},${(y1+y2)/2 - curveAmt} ${x2},${y2}`);
+                g.setAttribute("class", "snake-group");
+                path.setAttribute("d", `M${x1},${y1} Q${(x1+x2)/2 + 60},${(y1+y2)/2 - 60} ${x2},${y2}`);
                 g.appendChild(path);
-                // Gambar Kepala Ular
                 const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 head.setAttribute("cx", x1); head.setAttribute("cy", y1); head.setAttribute("r", 10); head.setAttribute("class", "snake-head");
                 g.appendChild(head);
-                svg.appendChild(g);
             }
+            svg.appendChild(g);
         });
     }
 
     function drawDice(num) {
         const cube = document.getElementById('cube');
-        const rotations = {
-            1: 'rotateX(0deg) rotateY(0deg)', 2: 'rotateX(0deg) rotateY(-180deg)', 3: 'rotateX(0deg) rotateY(-90deg)',
-            4: 'rotateX(0deg) rotateY(90deg)', 5: 'rotateX(-90deg) rotateY(0deg)', 6: 'rotateX(90deg) rotateY(0deg)'
-        };
-        cube.style.transform = rotations[num];
+        const rotations = { 1: 'rotateX(0deg) rotateY(0deg)', 2: 'rotateX(0deg) rotateY(-180deg)', 3: 'rotateX(0deg) rotateY(-90deg)', 4: 'rotateX(0deg) rotateY(90deg)', 5: 'rotateX(-90deg) rotateY(0deg)', 6: 'rotateX(90deg) rotateY(0deg)' };
+        cube.style.transform = rotations[num] || rotations[1];
     }
 
     function syncGame() {
-        // Redraw connections kalau layar berubah
         window.addEventListener('resize', drawConnections);
-
         db.ref('rooms/' + roomCode).on('value', s => {
             const d = s.val(); if (!d) return;
-            const ps = d.players; const turnIndex = d.turnIndex;
-            const turnP = ps[turnIndex];
+            const ps = d.players; const turnP = ps[d.turnIndex];
             
-            // Cek giliran
+            // PANEL DADU TETAP ADA TAPI DI-DISABLE KALAU BUKAN GILIRAN
+            const diceArea = document.getElementById('dice-area');
+            diceArea.style.display = 'flex'; 
+            diceArea.style.opacity = (turnP.name === myName && !turnP.finished) ? "1" : "0.3";
+            diceArea.style.pointerEvents = (turnP.name === myName && !turnP.finished && !d.moving) ? "auto" : "none";
+
             document.getElementById('status-text').innerText = turnP.name === myName ? "GILIRAN LO, GAS!" : turnP.name.toUpperCase() + " LAGI JALAN";
             
-            // TAMPILKAN DADU HANYA JIKA GILIRAN SAYA
-            if (turnP.name === myName && !turnP.finished && !d.moving) {
-                document.getElementById('dice-area').style.display = 'flex';
-            } else {
-                document.getElementById('dice-area').style.display = 'none';
-            }
-
-            // Tampilkan Dadu Sesuai Roll Terakhir
-            if (!d.moving) { drawDice(d.lastRoll || 1); }
+            if (!isLocalRolling) drawDice(d.lastRoll || 1);
             
-            // Gambar Profil SQUAD JUMBO (Hanya yang main)
             document.querySelectorAll('.pawn').forEach(p => p.remove());
             ps.forEach((p, i) => {
                 const cell = document.getElementById(`cell-${p.pos}`);
                 const rect = cell.getBoundingClientRect(); const br = document.getElementById('board-container').getBoundingClientRect();
                 const pawn = document.createElement('div'); pawn.className = 'pawn' + (p.finished ? ' finished' : '');
                 pawn.style.backgroundImage = `url('${p.img}')`;
-                // Pion agak geser biar nggak numpuk
                 pawn.style.left = `${(rect.left - br.left) + (i * 6)}px`; pawn.style.top = `${(rect.top - br.top) + (i * 6)}px`;
-                pawn.innerHTML = `<div class="pawn-label">${p.name} ${p.finished ? '✅' : ''}</div>`;
+                pawn.innerHTML = `<div class="pawn-label">${p.name}</div>`;
                 document.getElementById('board-container').appendChild(pawn);
-                
-                // Auto Scroll ke pemain yang aktif (No Lag)
-                if (p.name === turnP.name && !turnP.finished && p.name === myName) pawn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
-
-            // GAME SELESAI
-            if (ps.every(p => p.finished)) {
-                setTimeout(() => { alert("GAME SELESAI!"); db.ref('rooms/' + roomCode).remove(); location.reload(); }, 2000);
-            }
         });
         
-        db.ref('chats/' + roomCode).limitToLast(15).on('value', s => {
+        db.ref('chats/' + roomCode).limitToLast(10).on('value', s => {
             const box = document.getElementById('chat-box'); box.innerHTML = '';
-            s.forEach(child => {
-                const m = child.val();
-                box.innerHTML += `<div class="mb-1"><span class="text-yellow-500 font-black uppercase text-[9px] mr-1">${m.user}:</span><span class="text-slate-200">${m.text}</span></div>`;
-            });
+            s.forEach(child => { box.innerHTML += `<div class='mb-1 text-[11px]'><b class='text-yellow-500'>${child.val().user}:</b> ${child.val().text}</div>`; });
             box.scrollTop = box.scrollHeight;
         });
     }
 
-    function syncStats() {
-        db.ref('stats/lastWinner').on('value', s => document.getElementById('last-winner').innerText = s.val() || '-');
-        db.ref('stats/mostWins').on('value', s => {
-            const wins = s.val() || {};
-            let top = Object.entries(wins).sort((a,b) => b[1]-a[1])[0];
-            document.getElementById('most-winner').innerText = top ? `${top[0]} (${top[1]}X)` : '-';
-        });
-    }
-
     async function handleRoll() {
-        if (isRolling) return; // Mencegah klik dobel
+        if (isLocalRolling) return;
         const snap = await db.ref('rooms/' + roomCode).get(); const data = snap.val();
-        if (!data) return;
-        
-        const players = data.players; const pIdx = data.turnIndex;
-        if (players[pIdx].name !== myName || data.moving || players[pIdx].finished) return;
+        if (!data || data.moving) return;
 
-        isRolling = true;
-        
-        // Acak hasil dadu
+        isLocalRolling = true;
         const roll = Math.floor(Math.random() * 6) + 1;
         db.ref('rooms/' + roomCode).update({ moving: true, lastRoll: roll });
         
-        // State 1: Kocok Dadu (Muter cepet)
         document.getElementById('cube').classList.add('cube-rolling');
         
-        // State 2: Nunggu kocok selesai, baru gerakin pion
         setTimeout(async () => {
             document.getElementById('cube').classList.remove('cube-rolling');
-            drawDice(roll); // Tampilkan hasil akhirnya di cube
+            drawDice(roll);
             
-            let pList = [...players]; let p = pList[pIdx];
+            let pList = [...data.players]; let p = pList[data.turnIndex];
             let target = Math.min(p.pos + roll, 100);
 
-            // Gerak Pion Satu-satu (Optimal No Lag)
             for (let i = p.pos + 1; i <= target; i++) {
                 p.pos = i;
-                await db.ref('rooms/' + roomCode + '/players').set(pList); // Update Firebase
-                await new Promise(r => setTimeout(r, 250)); // Jeda antar petak
+                await db.ref('rooms/' + roomCode + '/players').set(pList);
+                await new Promise(r => setTimeout(r, 250));
             }
 
-            // Ular/Tangga
             if (jumps[p.pos]) { 
                 await new Promise(r => setTimeout(r, 600)); 
                 p.pos = jumps[p.pos]; db.ref('rooms/' + roomCode + '/players').set(pList); 
             }
 
-            // Menang Lanjut
-            if (p.pos === 100 && !p.finished) {
-                confetti(); p.finished = true;
-                db.ref('stats/lastWinner').set(myName);
-                db.ref('stats/mostWins/' + myName).transaction(c => (c || 0) + 1);
-                db.ref('chats/' + roomCode).push({ user: "SISTEM", text: `👑 ${myName} TELAH FINISH!` });
-            }
+            if (p.pos === 100) { confetti(); p.finished = true; }
 
-            // OPER GILIRAN (Skip yang sudah finish)
-            let nextTurn = (pIdx + 1) % pList.length;
-            for(let i=0; i<pList.length; i++) {
-                if(!pList[nextTurn].finished) break;
-                nextTurn = (nextTurn + 1) % pList.length;
-            }
+            let nxt = (data.turnIndex + 1) % pList.length;
+            while(pList[nxt].finished && pList.some(x=>!x.finished)) nxt = (nxt + 1) % pList.length;
             
-            db.ref('rooms/' + roomCode).update({ turnIndex: nextTurn, moving: false });
-            isRolling = false; // Reset klik dobel
-
-        }, 1200); // Total waktu animasi kocok dadu
+            db.ref('rooms/' + roomCode).update({ turnIndex: nxt, moving: false });
+            isLocalRolling = false;
+        }, 1200);
     }
 
     function sendMessage() {
         const inp = document.getElementById('chat-input'); if (!inp.value) return;
         db.ref('chats/' + roomCode).push({ user: myName, text: inp.value }); inp.value = '';
     }
-    function sendEmote(e) { db.ref('chats/' + roomCode).push({ user: myName, text: e }); }
-</script>
-</body>
-</html>
