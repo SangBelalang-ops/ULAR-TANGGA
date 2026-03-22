@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQUAD LADDER | ONLINE MULTIPLAYER</title>
+    <title>SQUAD LADDER | PION MUKA TEMEN EDITION</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FIREBASE SDK (COMPAT VERSION) -->
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
@@ -15,7 +14,19 @@
         #board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 2px; background: #334155; position: relative; aspect-ratio: 1/1; border-radius: 8px; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
         .cell { background: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #475569; position: relative; }
         .cell span { position: absolute; top: 2px; left: 3px; font-weight: 800; }
-        .pawn-head { width: 32px; height: 32px; position: absolute; z-index: 50; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); background-size: contain; background-repeat: no-repeat; filter: drop-shadow(0 4px 6px #000); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+        /* PION MUKA TEMEN - STYLE BARU */
+        .pawn-head { 
+            width: 32px; height: 32px; 
+            position: absolute; 
+            z-index: 50; 
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            background-size: cover; 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            filter: drop-shadow(0 4px 6px #000); 
+            border-radius: 50%; /* Tetap bulat biar rapi */
+            border: 2px solid rgba(255,255,255,0.8); /* Border putih tegas */
+        }
         .dice { width: 70px; height: 70px; background: #fff; color: #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; cursor: pointer; border: 4px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .dice-rolling { animation: shake 0.1s infinite; }
         @keyframes shake { 0% {transform: rotate(0)} 50% {transform: rotate(10deg)} 100% {transform: rotate(-10deg)} }
@@ -23,7 +34,6 @@
 </head>
 <body>
 
-<!-- SETUP SCREEN: CREATE/JOIN -->
 <div id="setup-screen" class="fixed inset-0 bg-[#020617] z-[1000] flex flex-col items-center justify-center p-6 text-center">
     <h1 class="text-4xl font-black italic text-blue-500 mb-2">SQUAD <span class="text-white">LADDER</span></h1>
     <p class="text-[10px] text-slate-500 mb-10 tracking-[0.3em] font-bold">REALTIME MULTIPLAYER ENGINE</p>
@@ -36,7 +46,6 @@
     </div>
 </div>
 
-<!-- GAME UI -->
 <div id="game-ui" class="hidden p-4 max-w-lg mx-auto h-screen flex flex-col justify-center">
     <div class="flex justify-between items-center mb-4">
         <div class="bg-blue-600/20 border border-blue-500/30 px-4 py-1 rounded-full text-[10px] font-black text-blue-400 uppercase">
@@ -46,8 +55,7 @@
     </div>
     
     <div id="board">
-        <!-- Visual garis ular/tangga bisa lo tambah di sini nanti bre -->
-    </div>
+        </div>
 
     <div class="fixed bottom-0 left-0 right-0 p-8 bg-slate-950/90 backdrop-blur-md border-t border-white/5">
         <div class="flex items-center gap-6 max-w-md mx-auto">
@@ -65,7 +73,7 @@
     const firebaseConfig = {
         apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
         authDomain: "ulartanggasquad.firebaseapp.com",
-        databaseURL: "https://ulartanggasquad-default-rtdb.firebaseio.com", // Cek di console kalau beda
+        databaseURL: "https://ulartanggasquad-default-rtdb.firebaseio.com", 
         projectId: "ulartanggasquad",
         storageBucket: "ulartanggasquad.firebasestorage.app",
         messagingSenderId: "492517449717",
@@ -80,13 +88,15 @@
     let players = [];
     let turnIndex = 0;
     const jumps = { 2: 38, 7: 14, 8: 31, 15: 26, 21: 42, 36: 44, 51: 67, 71: 91, 78: 98, 16: 6, 46: 25, 49: 11, 62: 19, 64: 60, 74: 53, 89: 68, 95: 75, 99: 80 };
+    // NAMA-NAMA SQUAD LO
     const defaultPlayers = ["Lilas", "Albert", "Tegar", "Meggy", "Anjas", "Piter"];
 
     function createRoom() {
         roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
         // ACAK GILIRAN PAS BIKIN ROOM
         const shuffled = [...defaultPlayers].sort(() => Math.random() - 0.5);
-        const initialPlayers = shuffled.map(name => ({ name: name, pos: 1, img: `${name.toLowerCase()}.png` }));
+        // SEMUA PAKAI FOTO PION.PNG YANG SAMA
+        const initialPlayers = shuffled.map(name => ({ name: name, pos: 1, img: `pion.png` }));
         
         db.ref('rooms/' + roomCode).set({
             players: initialPlayers,
@@ -152,7 +162,7 @@
             const head = document.createElement('div');
             head.className = 'pawn-head';
             head.style.backgroundImage = `url('${p.img}')`;
-            // Biar gak tumpang tindih
+            // Biar gak tumpang tindih pas di kotak yang sama
             const offset = (i * 4) - 8;
             head.style.marginLeft = `${offset}px`;
             head.style.marginTop = `${offset}px`;
