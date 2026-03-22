@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQUAD LADDER | PION MUKA TEMEN EDITION</title>
+    <title>SQUAD LADDER | ONLINE MULTIPLAYER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -14,19 +14,7 @@
         #board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 2px; background: #334155; position: relative; aspect-ratio: 1/1; border-radius: 8px; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
         .cell { background: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #475569; position: relative; }
         .cell span { position: absolute; top: 2px; left: 3px; font-weight: 800; }
-        /* PION MUKA TEMEN - STYLE BARU */
-        .pawn-head { 
-            width: 32px; height: 32px; 
-            position: absolute; 
-            z-index: 50; 
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
-            background-size: cover; 
-            background-repeat: no-repeat; 
-            background-position: center; 
-            filter: drop-shadow(0 4px 6px #000); 
-            border-radius: 50%; /* Tetap bulat biar rapi */
-            border: 2px solid rgba(255,255,255,0.8); /* Border putih tegas */
-        }
+        .pawn-head { width: 32px; height: 32px; position: absolute; z-index: 50; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); background-size: cover; background-repeat: no-repeat; background-position: center; filter: drop-shadow(0 4px 6px #000); border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); }
         .dice { width: 70px; height: 70px; background: #fff; color: #000; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; cursor: pointer; border: 4px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .dice-rolling { animation: shake 0.1s infinite; }
         @keyframes shake { 0% {transform: rotate(0)} 50% {transform: rotate(10deg)} 100% {transform: rotate(-10deg)} }
@@ -37,43 +25,36 @@
 <div id="setup-screen" class="fixed inset-0 bg-[#020617] z-[1000] flex flex-col items-center justify-center p-6 text-center">
     <h1 class="text-4xl font-black italic text-blue-500 mb-2">SQUAD <span class="text-white">LADDER</span></h1>
     <p class="text-[10px] text-slate-500 mb-10 tracking-[0.3em] font-bold">REALTIME MULTIPLAYER ENGINE</p>
-    
     <div class="w-full max-w-xs space-y-4">
-        <input id="room-input" type="text" placeholder="KODE ROOM (CONTOH: X7A2)" class="w-full bg-slate-900 p-4 rounded-xl border border-slate-700 text-center font-black text-blue-400 uppercase">
-        <button onclick="joinRoom()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-blue-500 transition-all">GABUNG MABAR</button>
+        <input id="room-input" type="text" placeholder="KODE ROOM" class="w-full bg-slate-900 p-4 rounded-xl border border-slate-700 text-center font-black text-blue-400 uppercase">
+        <button onclick="joinRoom()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-blue-500">GABUNG MABAR</button>
         <div class="py-4 text-slate-700 font-bold text-xs uppercase tracking-widest">--- ATAU ---</div>
-        <button onclick="createRoom()" class="w-full border-2 border-slate-700 py-4 rounded-xl font-black uppercase tracking-widest text-slate-400 hover:border-blue-600 hover:text-white transition-all">BIKIN ROOM BARU</button>
+        <button onclick="createRoom()" class="w-full border-2 border-slate-700 py-4 rounded-xl font-black uppercase tracking-widest text-slate-400 hover:border-blue-600">BIKIN ROOM BARU</button>
     </div>
 </div>
 
 <div id="game-ui" class="hidden p-4 max-w-lg mx-auto h-screen flex flex-col justify-center">
     <div class="flex justify-between items-center mb-4">
-        <div class="bg-blue-600/20 border border-blue-500/30 px-4 py-1 rounded-full text-[10px] font-black text-blue-400 uppercase">
-            ROOM: <span id="display-room-code">----</span>
-        </div>
-        <div class="text-[10px] font-black text-slate-500 uppercase tracking-tighter">V2.0 STABLE</div>
+        <div class="bg-blue-600/20 border border-blue-500/30 px-4 py-1 rounded-full text-[10px] font-black text-blue-400">ROOM: <span id="display-room-code">----</span></div>
+        <div class="text-[10px] font-black text-slate-500">V2.0 STABLE</div>
     </div>
-    
-    <div id="board">
-        </div>
-
+    <div id="board"></div>
     <div class="fixed bottom-0 left-0 right-0 p-8 bg-slate-950/90 backdrop-blur-md border-t border-white/5">
         <div class="flex items-center gap-6 max-w-md mx-auto">
             <div id="dice" class="dice" onclick="handleRoll()">🎲</div>
             <div class="flex-1">
                 <p id="status-text" class="text-sm font-black text-blue-400 uppercase leading-tight">Menunggu Giliran...</p>
-                <p id="turn-name" class="text-[9px] text-slate-500 font-bold uppercase mt-1">Siap-siap ya bre!</p>
+                <p id="turn-name" class="text-[9px] text-slate-500 font-bold uppercase mt-1">Siap-siap bre!</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // === CONFIG FIREBASE LO ===
     const firebaseConfig = {
         apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
         authDomain: "ulartanggasquad.firebaseapp.com",
-        databaseURL: "https://ulartanggasquad-default-rtdb.firebaseio.com", 
+        databaseURL: "https://ulartanggasquad-default-rtdb.asia-southeast1.firebasedatabase.app", 
         projectId: "ulartanggasquad",
         storageBucket: "ulartanggasquad.firebasestorage.app",
         messagingSenderId: "492517449717",
@@ -88,31 +69,19 @@
     let players = [];
     let turnIndex = 0;
     const jumps = { 2: 38, 7: 14, 8: 31, 15: 26, 21: 42, 36: 44, 51: 67, 71: 91, 78: 98, 16: 6, 46: 25, 49: 11, 62: 19, 64: 60, 74: 53, 89: 68, 95: 75, 99: 80 };
-    // NAMA-NAMA SQUAD LO
     const defaultPlayers = ["Lilas", "Albert", "Tegar", "Meggy", "Anjas", "Piter"];
 
     function createRoom() {
         roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-        // ACAK GILIRAN PAS BIKIN ROOM
         const shuffled = [...defaultPlayers].sort(() => Math.random() - 0.5);
-        // SEMUA PAKAI FOTO PION.PNG YANG SAMA
-        const initialPlayers = shuffled.map(name => ({ name: name, pos: 1, img: `pion.png` }));
-        
-        db.ref('rooms/' + roomCode).set({
-            players: initialPlayers,
-            turn: 0,
-            lastRoll: 1,
-            moving: false
-        }).then(() => startGame(roomCode));
+        const initialPlayers = shuffled.map(name => ({ name: name, pos: 1, img: `${name.toLowerCase()}.png` }));
+        db.ref('rooms/' + roomCode).set({ players: initialPlayers, turn: 0, lastRoll: 1, moving: false }).then(() => startGame(roomCode));
     }
 
     function joinRoom() {
         const input = document.getElementById('room-input').value.toUpperCase();
-        if (!input) return alert("Isi kodenya bre!");
-        db.ref('rooms/' + input).once('value', s => {
-            if (s.exists()) startGame(input);
-            else alert("Room gak ada! Coba cek kodenya lagi.");
-        });
+        if (!input) return alert("Isi kodenya!");
+        db.ref('rooms/' + input).once('value', s => { if (s.exists()) startGame(input); else alert("Room gak ada!"); });
     }
 
     function startGame(code) {
@@ -120,37 +89,24 @@
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('game-ui').classList.remove('hidden');
         document.getElementById('display-room-code').innerText = roomCode;
-        
-        initBoard();
-        syncGame();
+        initBoard(); syncGame();
     }
 
     function initBoard() {
-        const boardEl = document.getElementById('board');
-        boardEl.innerHTML = '';
+        const boardEl = document.getElementById('board'); boardEl.innerHTML = '';
         for (let r = 9; r >= 0; r--) {
             for (let c = 0; c < 10; c++) {
                 let num = (r % 2 === 0) ? (r * 10 + c + 1) : (r * 10 + (10 - c));
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.id = `cell-${num}`;
-                cell.innerHTML = `<span>${num}</span>`;
-                boardEl.appendChild(cell);
+                const cell = document.createElement('div'); cell.className = 'cell'; cell.id = `cell-${num}`; cell.innerHTML = `<span>${num}</span>`; boardEl.appendChild(cell);
             }
         }
     }
 
     function syncGame() {
-        db.ref('rooms/' + roomCode).on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
-            players = data.players;
-            turnIndex = data.turn;
-            
-            updatePawns();
-            const currentP = players[turnIndex];
-            document.getElementById('status-text').innerText = `GILIRAN: ${currentP.name}`;
-            document.getElementById('turn-name').innerText = `TUNGGU DIA KOCOK DADU!`;
+        db.ref('rooms/' + roomCode).on('value', (s) => {
+            const data = s.val(); if (!data) return;
+            players = data.players; turnIndex = data.turn; updatePawns();
+            document.getElementById('status-text').innerText = `GILIRAN: ${players[turnIndex].name}`;
             document.getElementById('dice').innerHTML = ['🎲','⚀','⚁','⚂','⚃','⚄','⚅'][data.lastRoll || 0];
         });
     }
@@ -160,61 +116,25 @@
         players.forEach((p, i) => {
             const cell = document.getElementById(`cell-${p.pos}`);
             const head = document.createElement('div');
-            head.className = 'pawn-head';
-            head.style.backgroundImage = `url('${p.img}')`;
-            // Biar gak tumpang tindih pas di kotak yang sama
-            const offset = (i * 4) - 8;
-            head.style.marginLeft = `${offset}px`;
-            head.style.marginTop = `${offset}px`;
+            head.className = 'pawn-head'; head.style.backgroundImage = `url('${p.img}')`;
+            head.style.marginLeft = `${(i * 4) - 8}px`; head.style.marginTop = `${(i * 4) - 8}px`;
             cell.appendChild(head);
         });
     }
 
     function handleRoll() {
         db.ref('rooms/' + roomCode).once('value', async (s) => {
-            const data = s.val();
-            if (data.moving) return; // Cegah klik dobel
-
+            const data = s.val(); if (data.moving) return;
             const roll = Math.floor(Math.random() * 6) + 1;
             db.ref('rooms/' + roomCode).update({ moving: true, lastRoll: roll });
-            
-            const diceEl = document.getElementById('dice');
-            diceEl.classList.add('dice-rolling');
-
+            document.getElementById('dice').classList.add('dice-rolling');
             setTimeout(async () => {
-                diceEl.classList.remove('dice-rolling');
-                let p = players[turnIndex];
-                let startPos = p.pos;
-                let targetPos = Math.min(p.pos + roll, 100);
-
-                // Animasi jalan per langkah
-                for (let i = startPos + 1; i <= targetPos; i++) {
-                    p.pos = i;
-                    updatePawns();
-                    await new Promise(r => setTimeout(r, 200));
-                }
-
-                // Cek Ular/Tangga
-                if (jumps[p.pos]) {
-                    await new Promise(r => setTimeout(r, 600));
-                    p.pos = jumps[p.pos];
-                    updatePawns();
-                }
-
-                // Pindah Giliran
-                const nextTurn = (turnIndex + 1) % players.length;
-                db.ref('rooms/' + roomCode).update({
-                    players: players,
-                    turn: nextTurn,
-                    moving: false
-                });
-
-                if (p.pos === 100) {
-                    confetti({ particleCount: 200, spread: 80 });
-                    alert("GOKIL! " + p.name + " MENANG TELAK!");
-                    db.ref('rooms/' + roomCode).remove();
-                    location.reload();
-                }
+                document.getElementById('dice').classList.remove('dice-rolling');
+                let p = players[turnIndex]; let targetPos = Math.min(p.pos + roll, 100);
+                for (let i = p.pos + 1; i <= targetPos; i++) { p.pos = i; updatePawns(); await new Promise(r => setTimeout(r, 200)); }
+                if (jumps[p.pos]) { await new Promise(r => setTimeout(r, 600)); p.pos = jumps[p.pos]; updatePawns(); }
+                db.ref('rooms/' + roomCode).update({ players: players, turn: (turnIndex + 1) % players.length, moving: false });
+                if (p.pos === 100) { confetti(); alert(p.name + " MENANG!"); location.reload(); }
             }, 800);
         });
     }
