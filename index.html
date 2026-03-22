@@ -201,7 +201,8 @@
 
     // FUNGSI VISUAL ULAR & TANGGA PROPER (Optimal No Lag)
     function drawConnections() {
-        const svg = document.getElementById('svg-connections'); svg.innerHTML = svg.innerHTML.split('</defs>')[0] + '</defs>'; // Clear but keep defs
+        const svg = document.getElementById('svg-connections'); 
+        svg.innerHTML = svg.innerHTML.split('</defs>')[0] + '</defs>'; 
         const bRect = document.getElementById('board-container').getBoundingClientRect();
 
         Object.keys(jumps).forEach(sKey => {
@@ -215,38 +216,67 @@
             const y2 = eEl.top - bRect.top + eEl.height/2;
 
             if (end > start) {
-                // DESAIN TANGGA HD (Gradient Tali)
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("class", "ladder-group");
+                // TANGGA KAYU SOLID (Double Line)
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); 
+                g.setAttribute("class", "ladder-group");
                 const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                const dx = x2 - x1; const dy = y2 - y1; const off = 10;
+                const off = 12;
                 path.setAttribute("d", `M${x1-off},${y1} L${x2-off},${y2} M${x1+off},${y1} L${x2+off},${y2}`);
                 g.appendChild(path);
-                // Gambar anak tangga solid
+                
                 const steps = 6;
                 for (let i = 1; i < steps; i++) {
-                    const lx = x1 + dx * (i/steps); const ly = y1 + dy * (i/steps);
+                    const lx = x1 + (x2 - x1) * (i/steps); 
+                    const ly = y1 + (y2 - y1) * (i/steps);
                     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    line.setAttribute("x1", lx-off-2); line.setAttribute("y1", ly); line.setAttribute("x2", lx+off+2); line.setAttribute("y2", ly); g.appendChild(line);
+                    line.setAttribute("x1", lx-off-4); line.setAttribute("y1", ly); 
+                    line.setAttribute("x2", lx+off+4); line.setAttribute("y2", ly); 
+                    g.appendChild(line);
                 }
                 svg.appendChild(g);
             } else {
-                // DESAIN ULAR HD (Zigzag Glowing)
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("class", "snake-group");
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                const midX = (x1 + x2) / 2 + (Math.random() > 0.5 ? 40 : -40);
+                // ULAR 2D SOLID BODY (Tebal & Berisi)
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); 
+                g.setAttribute("class", "snake-group");
+                
+                // Badan Ular (Garis Tebal 14px)
+                const body = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const midX = (x1 + x2) / 2 + (x1 > x2 ? 50 : -50);
                 const midY = (y1 + y2) / 2;
-                path.setAttribute("d", `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`);
-                g.appendChild(path);
-                // Gambar Kepala Ular
-                const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                head.setAttribute("cx", x1); head.setAttribute("cy", y1); head.setAttribute("r", 10);
-                head.setAttribute("class", "snake-head");
+                body.setAttribute("d", `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`);
+                body.setAttribute("stroke", "#991b1b"); // Merah Tua Solid
+                body.setAttribute("stroke-width", "14");
+                body.setAttribute("fill", "none");
+                body.setAttribute("stroke-linecap", "round");
+                g.appendChild(body);
+
+                // Detail Corak/Garis Tengah Ular
+                const pattern = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                pattern.setAttribute("d", `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`);
+                pattern.setAttribute("stroke", "#ef4444"); // Merah Terang
+                pattern.setAttribute("stroke-width", "4");
+                pattern.setAttribute("fill", "none");
+                pattern.setAttribute("stroke-dasharray", "10,5"); // Biar kayak sisik
+                g.appendChild(pattern);
+
+                // Kepala Ular (Bentuk Oval 2D)
+                const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+                head.setAttribute("cx", x1); head.setAttribute("cy", y1);
+                head.setAttribute("rx", "12"); head.setAttribute("ry", "15");
+                head.setAttribute("fill", "#b91c1c");
+                head.setAttribute("transform", `rotate(${Math.atan2(y1-y2, x1-x2) * 180 / Math.PI}, ${x1}, ${y1})`);
                 g.appendChild(head);
+
+                // Mata Ular (Biar makin beneran)
+                const eye = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                eye.setAttribute("cx", x1); eye.setAttribute("cy", y1);
+                eye.setAttribute("r", "3"); eye.setAttribute("fill", "yellow");
+                g.appendChild(eye);
+
                 svg.appendChild(g);
             }
         });
     }
-
     function drawDice(num) {
         const cube = document.getElementById('cube');
         // Rotasi CSS 3D buat nampilin sisi yang bener
