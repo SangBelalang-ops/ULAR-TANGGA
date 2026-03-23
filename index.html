@@ -2,226 +2,221 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD STICKMAN: PHOTO EDITION</title>
+    <title>NEON RAIDER: CYBER-SURGE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { margin: 0; overflow: hidden; background: #020617; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        canvas { background: #0f172a; border: 4px solid #334155; border-radius: 15px; }
-        .hud { position: absolute; top: 20px; width: 780px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
-        .stat { background: rgba(15, 23, 42, 0.9); padding: 12px; border-radius: 8px; border: 1px solid #475569; min-width: 160px; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body { margin: 0; overflow: hidden; background: #020617; font-family: 'Orbitron', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { background: #000; border: 2px solid #06b6d4; box-shadow: 0 0 30px #06b6d444; cursor: none; }
+        .ui { position: absolute; pointer-events: none; color: #fff; width: 800px; height: 500px; }
+        .bar { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; border: 1px solid #334155; }
+        .glow-text { text-shadow: 0 0 10px #06b6d4; }
+        #level-up { display: none; background: rgba(0,0,0,0.9); position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; pointer-events: all; }
     </style>
 </head>
 <body>
 
-    <div class="hud">
-        <div class="stat">
-            <p id="char-name" class="text-yellow-500 font-black italic uppercase text-xs">LILAS</p>
-            <p id="lives" class="text-xl">❤️❤️❤️</p>
-            <div class="w-full h-2 bg-slate-800 mt-2 rounded-full overflow-hidden border border-slate-600"><div id="hp" class="h-full bg-green-500 transition-all"></div></div>
+    <div class="ui p-6 flex flex-col justify-between">
+        <div class="flex justify-between items-start">
+            <div class="w-48">
+                <p class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-1">Integrity</p>
+                <div class="bar"><div id="hp-fill" class="h-full bg-cyan-500 w-full shadow-[0_0_10px_#06b6d4]"></div></div>
+                <p class="text-[10px] text-fuchsia-400 font-bold uppercase tracking-widest mt-3 mb-1">Energy Core</p>
+                <div class="bar"><div id="energy-fill" class="h-full bg-fuchsia-500 w-full shadow-[0_0_10px_#d946ef]"></div></div>
+            </div>
+            <div class="text-right">
+                <h1 class="text-2xl font-black italic glow-text">CYBER-SURGE</h1>
+                <p id="score-val" class="text-cyan-400 text-sm">DATA: 000000</p>
+            </div>
         </div>
-        <div class="stat text-center">
-            <p id="wave-display" class="text-white text-2xl font-black italic tracking-tighter">WAVE 1</p>
-            <p id="score" class="text-slate-400 text-[10px] font-bold uppercase">Ultimate: [E] READY</p>
-        </div>
-        <div class="stat text-right">
-            <p class="text-[10px] text-slate-500 uppercase font-bold">Active Weapon</p>
-            <p id="weapon-name" class="text-sm text-red-500 font-black italic uppercase">Pistol Egg</p>
-            <div class="w-24 h-1 bg-red-900 mt-1 ml-auto rounded-full overflow-hidden"><div id="w-progress" class="h-full bg-red-500 w-0"></div></div>
+        
+        <div id="level-up" class="z-50 border-2 border-cyan-500 rounded-lg m-20">
+            <h2 class="text-2xl font-black mb-6 text-cyan-400">UPGRADE DETECTED</h2>
+            <div class="flex gap-4">
+                <button onclick="applyUpgrade('speed')" class="bg-cyan-900/50 border border-cyan-500 p-4 hover:bg-cyan-500 hover:text-black transition">ACCELERATION</button>
+                <button onclick="applyUpgrade('damage')" class="bg-fuchsia-900/50 border border-fuchsia-500 p-4 hover:bg-fuchsia-500 hover:text-black transition">OVERLOAD</button>
+                <button onclick="applyUpgrade('shield')" class="bg-blue-900/50 border border-blue-500 p-4 hover:bg-blue-500 hover:text-black transition">REINFORCE</button>
+            </div>
         </div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    let score = 0, wave = 1, lives = 3, hp = 100, gameActive = true;
-    let shake = 0, slowMo = 1, ultTimer = 0; 
-    const gravity = 0.8, friction = 0.8, groundY = 350;
-    const keys = {};
-
-    // SQUAD ASSETS
-    const squad = [
-        {name: "LILAS", img: "lilas.png"}, {name: "MEGGY", img: "meggy.png"}, 
-        {name: "ALBERT", img: "albert.png"}, {name: "ANJAS", img: "anjas.png"},
-        {name: "TEGAR", img: "tegar.png"}, {name: "PITER", img: "piter.png"}
-    ];
-    let currentChar = 0;
-    const headImgs = squad.map(m => {
-        const i = new Image();
-        i.src = m.img;
-        return i;
-    });
+    // GAME STATE
+    let state = {
+        score: 0, level: 1, xp: 0, 
+        hp: 100, energy: 100, 
+        active: true, time: 0,
+        shake: 0, slow: 1
+    };
 
     const player = {
-        x: 100, y: 310, w: 30, h: 65, dx: 0, dy: 0, speed: 6.5, jump: 16, grounded: false,
-        weapon: 'NORMAL', weaponTimer: 0, maxWeaponTimer: 400,
-        draw() {
-            // Stickman Body
-            ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(this.x+15, this.y+25); ctx.lineTo(this.x+15, this.y+50); // Spine
-            ctx.moveTo(this.x+15, this.y+30); ctx.lineTo(this.x+5, this.y+45); // Arms
-            ctx.moveTo(this.x+15, this.y+30); ctx.lineTo(this.x+25, this.y+45);
-            ctx.moveTo(this.x+15, this.y+50); ctx.lineTo(this.x+5, this.y+65); // Legs
-            ctx.moveTo(this.x+15, this.y+50); ctx.lineTo(this.x+25, this.y+65);
-            ctx.stroke();
-            
-            // Photo Head
-            try {
-                ctx.drawImage(headImgs[currentChar], this.x, this.y, 30, 30);
-            } catch(e) {
-                // Fallback kalau gambar gak ketemu
-                ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(this.x+15, this.y+15, 12, 0, Math.PI*2); ctx.fill();
-            }
+        x: 100, y: 250, r: 15, 
+        speed: 5, fireRate: 15, timer: 0,
+        stats: { dmg: 1, spd: 5, shield: 0 }
+    };
+
+    let bullets = [], enemies = [], particles = [], beams = [];
+
+    // CORE LOGIC
+    function createParticle(x, y, color) {
+        for(let i=0; i<8; i++) {
+            particles.push({
+                x, y, color,
+                vx: (Math.random()-0.5)*10,
+                vy: (Math.random()-0.5)*10,
+                life: 1, decay: 0.02 + Math.random()*0.02
+            });
         }
-    };
-
-    let enemies = [], bullets = [], eBullets = [], items = [], boss = null;
-
-    window.onkeydown = (e) => {
-        keys[e.code] = true;
-        if(e.key >= 1 && e.key <= 6) { 
-            currentChar = e.key - 1; 
-            document.getElementById('char-name').innerText = squad[currentChar].name;
-        }
-        if(e.code === 'KeyE' && ultTimer <= 0 && gameActive) triggerUlt();
-    };
-    window.onkeyup = (e) => { 
-        keys[e.code] = false;
-        if(e.code === 'KeyF' && gameActive) shoot();
-        if(e.code === 'KeyF' && !gameActive) location.reload();
-    };
-
-    function triggerUlt() {
-        shake = 40; slowMo = 0.1; ultTimer = 600;
-        enemies = []; eBullets = [];
-        if(boss) boss.hp -= 200;
-        score += 500;
     }
 
     function shoot() {
-        const bY = player.y + 35;
-        if(player.weapon === 'NORMAL') bullets.push({x: player.x+25, y: bY, vx: 13, vy: 0, type: 'NORMAL', r: 4});
-        else if(player.weapon === 'LASER') bullets.push({x: player.x+25, y: bY, vx: 25, vy: 0, type: 'LASER', r: 2});
-        else if(player.weapon === 'GRENADE') bullets.push({x: player.x+25, y: bY, vx: 8, vy: -10, type: 'GRENADE', r: 8});
-        else if(player.weapon === 'SPREAD') {
-            [-2, 0, 2].forEach(v => bullets.push({x: player.x+25, y: bY, vx: 13, vy: v, type: 'NORMAL', r: 4}));
+        if(state.energy > 5) {
+            bullets.push({ x: player.x+20, y: player.y, vx: 15, vy: 0, dmg: player.stats.dmg });
+            state.energy -= 2;
+            state.shake = 3;
         }
     }
 
-    function spawnWave() {
-        if(wave % 5 === 0) {
-            boss = { x: 850, y: 100, w: 120, h: 250, hp: 600 + (wave*100), maxHp: 600 + (wave*100), speed: 1.2, lastShot: 0 };
-        } else {
-            for(let i=0; i < (3 + wave); i++) {
-                enemies.push({ x: 900 + (i*250), y: 290, w: 30, h: 60, hp: 40, speed: 2, lastShot: Date.now() + (i*800) });
-            }
-        }
-        if(Math.random() > 0.4) items.push({x: 800, y: 200, w: 35, h: 35, type: ['LASER','GRENADE','SPREAD'][Math.floor(Math.random()*3)]});
+    function spawnEnemy() {
+        const type = Math.random() > 0.8 ? 'HEAVY' : 'SCOUT';
+        enemies.push({
+            x: 850, y: Math.random() * 450 + 25,
+            hp: type === 'HEAVY' ? 5 : 2,
+            type, speed: type === 'SCOUT' ? 3 + (state.level * 0.2) : 1.5,
+            lastShot: 0
+        });
     }
 
-    function update() {
-        if(!gameActive) return;
+    function applyUpgrade(type) {
+        if(type === 'speed') player.stats.spd += 1.5;
+        if(type === 'damage') player.stats.dmg += 0.5;
+        if(type === 'shield') player.stats.shield += 10;
+        document.getElementById('level-up').style.display = 'none';
+        state.slow = 1;
+        state.active = true;
+    }
 
-        // Movement
-        if(keys['KeyA']) player.dx = -player.speed;
-        if(keys['KeyD']) player.dx = player.speed;
-        if((keys['KeyW'] || keys['Space']) && player.grounded) { player.dy = -player.jump; player.grounded = false; }
-
-        player.x += player.dx * slowMo; player.y += player.dy * slowMo;
-        player.dy += gravity; player.dx *= friction;
-
-        if(player.y > groundY - player.h) { player.y = groundY - player.h; player.dy = 0; player.grounded = true; }
-        if(player.x < 0) player.x = 0; if(player.x > canvas.width - player.w) player.x = canvas.width - player.w;
-
-        // Visuals update
-        if(shake > 0) shake--;
-        if(slowMo < 1) slowMo += 0.02;
-        if(ultTimer > 0) {
-            ultTimer--;
-            document.getElementById('score').innerText = `ULTIMATE COOLDOWN: ${Math.ceil(ultTimer/60)}s`;
-        } else {
-            document.getElementById('score').innerText = `ULTIMATE: [E] READY`;
-        }
-
-        ctx.save();
-        if(shake > 0) ctx.translate(Math.random()*8-4, Math.random()*8-4);
-        ctx.clearRect(0,0,800,400);
+    // MAIN LOOP
+    function draw() {
+        if(!state.active) return requestAnimationFrame(draw);
         
-        ctx.fillStyle = "#1e293b"; ctx.fillRect(0, groundY, 800, 50); // Ground
-        player.draw();
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(0,0,800,500);
 
-        if(enemies.length === 0 && !boss) { wave++; spawnWave(); document.getElementById('wave-display').innerText = `WAVE ${wave}`; }
-
-        // BOSS
-        if(boss) {
-            if(boss.x > 550) boss.x -= boss.speed;
-            ctx.fillStyle = "#facc15"; ctx.fillRect(boss.x, boss.y, boss.w, boss.h); // Boss Giant
-            ctx.fillStyle = "#000"; ctx.fillRect(boss.x+20, boss.y+30, 20, 20); ctx.fillRect(boss.x+80, boss.y+30, 20, 20); // Eyes
-            
-            if(Date.now() - boss.lastShot > 2500) {
-                for(let i=0; i<3; i++) eBullets.push({x: boss.x, y: boss.y + 100 + (i*40), vx: -7, vy: (i-1)*2});
-                boss.lastShot = Date.now();
-            }
-            bullets.forEach((b, bi) => {
-                if(checkCol(b, boss)) {
-                    boss.hp -= (b.type === 'LASER' ? 5 : 15);
-                    if(b.type !== 'LASER') bullets.splice(bi, 1);
-                    if(boss.hp <= 0) { boss = null; score += 2000; shake = 50; slowMo = 0.1; }
-                }
-            });
+        // Screen Shake
+        if(state.shake > 0) {
+            ctx.translate(Math.random()*state.shake, Math.random()*state.shake);
+            state.shake *= 0.9;
         }
 
-        // ENEMIES
-        enemies.forEach((e, i) => {
-            e.x -= e.speed * slowMo;
-            ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(e.x+15, e.y+20); ctx.lineTo(e.x+15, e.y+60); ctx.stroke();
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x+15, e.y+10, 10, 0, Math.PI*2); ctx.fill();
+        // Grid Background Effect
+        ctx.strokeStyle = '#06b6d411';
+        ctx.lineWidth = 1;
+        for(let i=0; i<800; i+=40) {
+            ctx.beginPath(); ctx.moveTo(i - (state.time%40), 0); ctx.lineTo(i - (state.time%40), 500); ctx.stroke();
+        }
 
-            if(Date.now() - e.lastShot > 4000) { 
-                eBullets.push({x: e.x, y: e.y + 20, vx: -5});
-                e.lastShot = Date.now();
-            }
-            bullets.forEach((b, bi) => {
-                if(checkCol(b, e)) {
-                    e.hp -= 20; if(b.type !== 'LASER') bullets.splice(bi, 1);
-                    if(e.hp <= 0) { enemies.splice(i, 1); score += 100; shake = 8; }
-                }
-            });
-            if(checkCol(player, e)) takeDamage(1);
+        // Player (Neon Triangle)
+        ctx.shadowBlur = 15; ctx.shadowColor = '#06b6d4';
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(player.x + 20, player.y);
+        ctx.lineTo(player.x - 10, player.y - 15);
+        ctx.lineTo(player.x - 10, player.y + 15);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Input Handle
+        if(window.keys['KeyW'] && player.y > 20) player.y -= player.stats.spd;
+        if(window.keys['KeyS'] && player.y < 480) player.y += player.stats.spd;
+        if(window.keys['KeyA'] && player.x > 20) player.x -= player.stats.spd;
+        if(window.keys['KeyD'] && player.x < 400) player.x += player.stats.spd;
+
+        // Particles
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+            ctx.fillStyle = p.color + Math.floor(p.life*255).toString(16);
+            ctx.fillRect(p.x, p.y, 3, 3);
+            if(p.life <= 0) particles.splice(i, 1);
         });
 
-        // Entities update
-        bullets.forEach((b, i) => { b.x += b.vx; b.y += b.vy; if(b.type === 'GRENADE') b.vy += 0.4; ctx.fillStyle = "#22d3ee"; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); if(b.x > 800 || b.y > groundY) bullets.splice(i, 1); });
-        eBullets.forEach((eb, i) => { eb.x += eb.vx; eb.y += (eb.vy||0); ctx.fillStyle = "#f59e0b"; ctx.fillRect(eb.x, eb.y, 10, 5); if(checkCol(eb, player)) { eBullets.splice(i, 1); takeDamage(20); shake = 15; } if(eb.x < 0) eBullets.splice(i, 1); });
-        items.forEach((it, i) => { it.x -= 2; ctx.fillStyle = "#facc15"; ctx.fillRect(it.x, it.y, it.w, it.h); ctx.fillStyle = "#000"; ctx.fillText(it.type[0], it.x+10, it.y+23); if(checkCol(player, it)) { player.weapon = it.type; player.weaponTimer = player.maxWeaponTimer; document.getElementById('weapon-name').innerText = it.type; items.splice(i, 1); } });
+        // Bullets
+        bullets.forEach((b, i) => {
+            b.x += b.vx;
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(b.x, b.y-2, 15, 4);
+            if(b.x > 800) bullets.splice(i, 1);
+        });
 
-        // Weapon Timer HUD
-        if(player.weaponTimer > 0) {
-            player.weaponTimer--;
-            document.getElementById('w-progress').style.width = (player.weaponTimer/player.maxWeaponTimer*100) + "%";
-            if(player.weaponTimer <= 0) { player.weapon = 'NORMAL'; document.getElementById('weapon-name').innerText = "Pistol Egg"; }
+        // Enemies
+        enemies.forEach((e, i) => {
+            e.x -= e.speed;
+            ctx.fillStyle = e.type === 'HEAVY' ? '#d946ef' : '#f43f5e';
+            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+            ctx.fillRect(e.x, e.y-15, 30, 30);
+            
+            // Collision Player
+            if(Math.hypot(e.x - player.x, e.y - player.y) < 30) {
+                state.hp -= 20; e.hp = 0; state.shake = 10;
+            }
+
+            // Bullet Collision
+            bullets.forEach((b, bi) => {
+                if(b.x > e.x && b.x < e.x+30 && b.y > e.y-15 && b.y < e.y+15) {
+                    e.hp -= b.dmg;
+                    bullets.splice(bi, 1);
+                    createParticle(e.x, e.y, '#06b6d4');
+                }
+            });
+
+            if(e.hp <= 0) {
+                enemies.splice(i, 1);
+                state.score += 100;
+                state.xp += 20;
+                state.energy = Math.min(100, state.energy + 10);
+                createParticle(e.x, e.y, '#f43f5e');
+                if(state.xp >= 100) {
+                    state.level++; state.xp = 0;
+                    document.getElementById('level-up').style.display = 'flex';
+                    state.active = false;
+                }
+            }
+        });
+
+        // UI Update
+        document.getElementById('hp-fill').style.width = state.hp + "%";
+        document.getElementById('energy-fill').style.width = state.energy + "%";
+        document.getElementById('score-val').innerText = "DATA: " + state.score.toString().padStart(6, '0');
+
+        if(state.hp <= 0) {
+            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0,0,800,500);
+            ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 40px Orbitron";
+            ctx.fillText("SYSTEM FAILURE", 400, 250);
+            return;
         }
 
-        ctx.restore();
-        requestAnimationFrame(update);
+        state.time++;
+        if(state.time % Math.max(20, 60 - state.level*2) === 0) spawnEnemy();
+        state.energy = Math.min(100, state.energy + 0.1);
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        requestAnimationFrame(draw);
     }
 
-    function checkCol(a, b) { return a.x < b.x + (b.w||b.r) && a.x + (a.w||a.r) > b.x && a.y < b.y + (b.h||b.r) && a.y + (a.h||a.r) > b.y; }
-    function takeDamage(amt) { hp -= amt; document.getElementById('hp').style.width = hp + "%"; if(hp <= 0) { lives--; hp = 100; updateLivesUI(); if(lives <= 0) { gameActive = false; gameOver(); } } }
-    function updateLivesUI() { let l = ""; for(let i=0; i<lives; i++) l += "❤️"; document.getElementById('lives').innerText = l; }
+    // CONTROLS
+    window.keys = {};
+    window.onkeydown = (e) => { 
+        window.keys[e.code] = true;
+        if(e.code === 'Space' || e.code === 'KeyF') shoot();
+    };
+    window.onkeyup = (e) => window.keys[e.code] = false;
 
-    function gameOver() {
-        ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0,0,800,400);
-        ctx.fillStyle = "red"; ctx.font = "black 50px Arial"; ctx.textAlign = "center"; ctx.fillText("GAME OVER", 400, 200);
-    }
-
-    spawnWave();
-    update();
+    draw();
 </script>
 </body>
 </html>
