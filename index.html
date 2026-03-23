@@ -3,163 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLAUST PURE-PHYSICS PIANO</title>
+    <title>SQUAD CHICKEN RUN | FLAUST EDITION</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        .studio-header { background: #0f172a; padding: 20px 40px; border-bottom: 2px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
-        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 20px; }
-        .piano-body { display: flex; position: relative; height: 320px; margin: 0 auto; background: #000; padding: 5px; border-radius: 12px; border-top: 20px solid #1e293b; box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
-        .key { cursor: pointer; user-select: none; position: relative; transition: all 0.05s; }
-        .white-key { width: 50px; height: 300px; background: linear-gradient(to bottom, #fff 0%, #cbd5e1 100%); border: 1px solid #94a3b8; border-radius: 0 0 8px 8px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; }
-        .white-key.active { background: #fbbf24 !important; transform: translateY(6px); }
-        .black-key { width: 32px; height: 180px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 5px 5px; z-index: 2; margin-left: -16px; margin-right: -16px; border: 1px solid #000; }
-        .black-key.active { background: #f59e0b !important; transform: translateY(4px); }
-        .key-label { position: absolute; bottom: 35px; font-size: 11px; color: #f59e0b; font-weight: 900; z-index: 10; pointer-events: none; }
-        .sustain-btn { background: #1e293b; padding: 10px 25px; border-radius: 10px; font-size: 14px; font-weight: 800; border: 2px solid #334155; }
-        .sustain-btn.active { background: #f59e0b; color: #000; border-color: #fbbf24; box-shadow: 0 0 20px rgba(245,158,11,0.5); }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: linear-gradient(to bottom, #0f172a, #1e293b);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #gameCanvas {
+            background: #f1f5f9;
+            border-bottom: 10px solid #fbbf24;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            max-width: 100%;
+        }
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-<div class="studio-header">
-    <div>
-        <h1 class="text-3xl font-black italic text-white tracking-tighter">FLAUST <span class="text-yellow-500 underline">PHYSICS</span></h1>
-        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No-Latency Engine // 88 Keys Hybrid</p>
+    <div class="ui-panel">
+        <h1 class="text-4xl font-black text-yellow-500 italic tracking-tighter">SQUAD <span class="text-white">RUN</span></h1>
+        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">High Score: <span id="highScore">0</span></p>
     </div>
-    <button id="sus-btn" class="sustain-btn" onclick="toggleSustain()">SUSTAIN OFF</button>
-</div>
 
-<div class="piano-outer">
-    <div class="piano-body" id="piano"></div>
-</div>
+    <canvas id="gameCanvas" width="800" height="250"></canvas>
+
+    <div class="mt-8 text-slate-500 text-xs font-bold uppercase tracking-widest animate-pulse">
+        Press [Space] or Tap to Jump
+    </div>
 
 <script>
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const mainGain = audioCtx.createGain();
-    mainGain.connect(audioCtx.destination);
-    mainGain.gain.value = 0.5;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const highScoreEl = document.getElementById('highScore');
 
-    // Mapping Keyboard Lengkap
-    const keyMap = {
-        '1':'C5', '2':'C#5', '3':'D5', '4':'D#5', '5':'E5', '6':'F5', '7':'F#5', '8':'G5', '9':'G#5', '0':'A5',
-        'Q':'C4', 'W':'C#4', 'E':'D4', 'R':'D#4', 'T':'E4', 'Y':'F4', 'U':'F#4', 'I':'G4', 'O':'G#4', 'P':'A4',
-        'A':'C3', 'S':'C#3', 'D':'D3', 'F':'D#3', 'G':'E3', 'H':'F3', 'J':'F#3', 'K':'G3', 'L':'G#3',
-        'Z':'C2', 'X':'C#2', 'C':'D2', 'V':'D#2', 'B':'E2', 'N':'F2', 'M':'F#2'
+    let score = 0;
+    let highScore = localStorage.getItem('squadRunHS') || 0;
+    highScoreEl.innerText = highScore;
+
+    let gameActive = true;
+    let gravity = 0.6;
+    
+    // Objek Ayam
+    const chicken = {
+        x: 50,
+        y: 200,
+        width: 40,
+        height: 40,
+        dy: 0,
+        jumpForce: 12,
+        grounded: false,
+        draw() {
+            // Badan Ayam (Sederhana tapi lucu)
+            ctx.fillStyle = "#fbbf24"; // Kuning
+            ctx.beginPath();
+            ctx.roundRect(this.x, this.y, this.width, this.height, 10);
+            ctx.fill();
+            
+            // Jengger
+            ctx.fillStyle = "#ef4444"; // Merah
+            ctx.fillRect(this.x + 25, this.y - 5, 10, 10);
+            
+            // Mata
+            ctx.fillStyle = "#000";
+            ctx.fillRect(this.x + 30, this.y + 10, 4, 4);
+            
+            // Paruh
+            ctx.fillStyle = "#f59e0b";
+            ctx.beginPath();
+            ctx.moveTo(this.x + 40, this.y + 15);
+            ctx.lineTo(this.x + 48, this.y + 20);
+            ctx.lineTo(this.x + 40, this.y + 25);
+            ctx.fill();
+        }
     };
 
-    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    let sustain = false;
-    let activeOscs = {};
+    // Rintangan (Bambu/Pohon)
+    const obstacles = [];
+    let spawnTimer = 0;
 
-    // Build Piano
-    const piano = document.getElementById('piano');
-    for (let i = 0; i < 88; i++) {
-        const nIdx = (i + 9) % 12;
-        const oct = Math.floor((i + 9) / 12);
-        const name = notes[nIdx] + oct;
-        const isBlack = notes[nIdx].includes('#');
+    function spawnObstacle() {
+        const height = Math.random() * (60 - 30) + 30;
+        obstacles.push({
+            x: canvas.width,
+            y: canvas.height - height,
+            width: 25,
+            height: height,
+            speed: 6 + (score / 500) // Semakin lama makin cepet
+        });
+    }
 
-        const keyDiv = document.createElement('div');
-        keyDiv.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
-        keyDiv.id = `note-${name}`;
+    function update() {
+        if (!gameActive) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Gravitasi Ayam
+        if (!chicken.grounded) {
+            chicken.dy += gravity;
+            chicken.y += chicken.dy;
+        }
+
+        if (chicken.y + chicken.height > canvas.height) {
+            chicken.y = canvas.height - chicken.height;
+            chicken.dy = 0;
+            chicken.grounded = true;
+        }
+
+        chicken.draw();
+
+        // Handle Rintangan
+        spawnTimer++;
+        if (spawnTimer > Math.max(60, 100 - (score / 10))) {
+            spawnObstacle();
+            spawnTimer = 0;
+        }
+
+        obstacles.forEach((obs, index) => {
+            obs.x -= obs.speed;
+            
+            // Gambar Rintangan (Pohon Bambu)
+            ctx.fillStyle = "#16a34a"; // Hijau
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            ctx.fillStyle = "#14532d";
+            ctx.fillRect(obs.x + 10, obs.y, 5, obs.height);
+
+            // Tabrakan (Collision)
+            if (
+                chicken.x < obs.x + obs.width &&
+                chicken.x + chicken.width > obs.x &&
+                chicken.y < obs.y + obs.height &&
+                chicken.y + chicken.height > obs.y
+            ) {
+                gameOver();
+            }
+
+            if (obs.x + obs.width < 0) {
+                obstacles.splice(index, 1);
+                score += 10;
+            }
+        });
+
+        // Score
+        ctx.fillStyle = "#1e293b";
+        ctx.font = "bold 20px Plus Jakarta Sans";
+        ctx.fillText(`SCORE: ${score}`, 20, 30);
+
+        requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+        gameActive = false;
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('squadRunHS', highScore);
+            highScoreEl.innerText = highScore;
+        }
         
-        for (let char in keyMap) {
-            if (keyMap[char] === name) {
-                const label = document.createElement('div');
-                label.className = 'key-label';
-                label.innerText = char;
-                keyDiv.appendChild(label);
+        ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.font = "bold 40px Plus Jakarta Sans";
+        ctx.fillText("MODYAR, REK!", canvas.width / 2, canvas.height / 2);
+        ctx.font = "bold 15px Plus Jakarta Sans";
+        ctx.fillText("Press Space to Try Again", canvas.width / 2, canvas.height / 2 + 40);
+    }
+
+    function resetGame() {
+        score = 0;
+        obstacles.length = 0;
+        chicken.y = 200;
+        chicken.dy = 0;
+        gameActive = true;
+        update();
+    }
+
+    // Input Control
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            if (gameActive && chicken.grounded) {
+                chicken.dy = -chicken.jumpForce;
+                chicken.grounded = false;
+            } else if (!gameActive) {
+                resetGame();
             }
         }
-        
-        keyDiv.onmousedown = () => play(name);
-        keyDiv.onmouseup = () => stop(name);
-        piano.appendChild(keyDiv);
-    }
+    });
 
-    function getFreq(note) {
-        const name = note.slice(0, -1);
-        const oct = parseInt(note.slice(-1));
-        const idx = notes.indexOf(name);
-        return 440 * Math.pow(2, (idx - 9 + (oct - 4) * 12) / 12);
-    }
-
-    function play(n) {
-        if (activeOscs[n]) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        const freq = getFreq(n);
-        const osc = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-
-        // Hybrid Sound Modeling (Campuran Triangle & Sine biar suara piano tebel)
-        osc.type = 'triangle'; 
-        osc2.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        osc2.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        osc2.detune.setValueAtTime(2, audioCtx.currentTime); // Efek resonansi kayu
-
-        g.gain.setValueAtTime(0, audioCtx.currentTime);
-        g.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.01); // Attack instan
-        
-        // Peluruhan suara alami
-        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2.5);
-
-        osc.connect(g);
-        osc2.connect(g);
-        g.connect(mainGain);
-
-        osc.start();
-        osc2.start();
-
-        activeOscs[n] = { osc, osc2, g };
-        const el = document.getElementById(`note-${n}`);
-        if(el) el.classList.add('active');
-    }
-
-    function stop(n) {
-        if (!activeOscs[n] || sustain) return;
-        const { osc, osc2, g } = activeOscs[n];
-        const now = audioCtx.currentTime;
-        g.gain.cancelScheduledValues(now);
-        g.gain.setValueAtTime(g.gain.value, now);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
-        
-        setTimeout(() => {
-            osc.stop();
-            osc2.stop();
-            delete activeOscs[n];
-        }, 100);
-
-        const el = document.getElementById(`note-${n}`);
-        if(el) el.classList.remove('active');
-    }
-
-    function toggleSustain() {
-        sustain = !sustain;
-        const btn = document.getElementById('sus-btn');
-        btn.innerText = sustain ? "SUSTAIN ON" : "SUSTAIN OFF";
-        btn.classList.toggle('active');
-        if (!sustain) {
-            Object.keys(activeOscs).forEach(n => stop(n));
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (gameActive && chicken.grounded) {
+            chicken.dy = -chicken.jumpForce;
+            chicken.grounded = false;
+        } else if (!gameActive) {
+            resetGame();
         }
-    }
-
-    window.addEventListener('keydown', (e) => {
-        const char = e.key.toUpperCase();
-        if (e.code === 'Space') { e.preventDefault(); toggleSustain(); return; }
-        const note = keyMap[char];
-        if (note) play(note);
     });
 
-    window.addEventListener('keyup', (e) => {
-        const char = e.key.toUpperCase();
-        const note = keyMap[char];
-        if (note) stop(note);
-    });
+    update();
 </script>
 </body>
 </html>
