@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE MAGA | MAX LEVEL</title>
+    <title>SNAKE MAGA SQUAD | FIX TOTAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -21,47 +21,48 @@
 
         .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         
-        /* TANGGA KAYU PRO */
-        .ladder-rail { stroke: #78350f; stroke-width: 10; fill: none; stroke-linecap: round; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5)); }
+        /* VISUAL TANGGA */
+        .ladder-rail { stroke: #78350f; stroke-width: 10; fill: none; stroke-linecap: round; }
         .ladder-step { stroke: #d97706; stroke-width: 4; }
 
-        /* ULAR LEVEL MAX (SNAKE.IO STYLE) */
+        /* VISUAL ULAR MAX LEVEL */
         .snake-body { stroke: #991b1b; stroke-width: 16; fill: none; stroke-linecap: round; }
         .snake-stripes { stroke: #ef4444; stroke-width: 5; fill: none; stroke-linecap: round; stroke-dasharray: 8, 12; }
         .snake-head { fill: #b91c1c; }
         .snake-tongue { stroke: #f472b6; stroke-width: 2; fill: none; }
 
-        /* PION FOTO SQUAD */
-        .pawn { width: 50px; height: 50px; position: absolute; z-index: 50; transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); border-radius: 50%; border: 3px solid #fff; background-size: cover; box-shadow: 0 8px 15px rgba(0,0,0,0.5); }
-        .pawn-name { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: #000; font-size: 9px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+        /* PION FOTO SQUAD - FIX DISINI */
+        .pawn { 
+            width: 55px; height: 55px; position: absolute; z-index: 50; 
+            transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+            border-radius: 50%; border: 3px solid #fff; 
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.5); background-color: #1e293b;
+        }
+        .pawn-name { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: #000; font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 900; white-space: nowrap; }
 
-        /* SIDEBAR */
+        /* UI SIDEBAR */
         #sidebar { width: 280px; display: flex; flex-direction: column; gap: 10px; }
         .ui-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 15px; padding: 15px; }
 
-        /* DADU SIMPLE */
-        .dice { width: 80px; height: 80px; background: #fff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; transition: transform 0.2s; }
-        .dice:active { transform: scale(0.9); }
-        #dice-val { font-size: 40px; color: #000; }
+        .dice { width: 80px; height: 80px; background: #fff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #000; font-size: 35px; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .rolling { animation: spin 0.1s infinite linear; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        #chat-list { flex: 1; overflow-y: auto; font-size: 12px; }
-        .rolling { animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: rotate(5deg); } 50% { transform: rotate(-5deg); } 100% { transform: rotate(5deg); } }
+        #chat-list { flex: 1; overflow-y: auto; font-size: 12px; scroll-behavior: smooth; }
     </style>
 </head>
 <body>
 
-<!-- SETUP SCREEN -->
 <div id="setup" class="fixed inset-0 bg-slate-950 z-[100] flex flex-col items-center justify-center p-4">
-    <h1 class="text-5xl font-black text-yellow-500 mb-8 italic">SNAKE MAGA</h1>
+    <h1 class="text-5xl font-black text-yellow-500 mb-8 italic tracking-tighter">SNAKE MAGA</h1>
     <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm shadow-2xl">
-        <input id="room-id" type="text" placeholder="KODE ROOM" class="w-full bg-slate-950 border border-slate-700 p-4 rounded-xl text-center text-xl font-bold mb-4 uppercase text-yellow-500">
-        <div id="hero-select" class="grid grid-cols-3 gap-2 mb-6 text-[10px]"></div>
-        <button onclick="joinGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black text-white transition-all shadow-lg">START GAME</button>
+        <input id="room-id" type="text" placeholder="KODE ROOM" class="w-full bg-slate-950 border border-slate-700 p-4 rounded-xl text-center text-xl font-bold mb-4 uppercase text-yellow-500 outline-none">
+        <div id="hero-select" class="grid grid-cols-3 gap-2 mb-6"></div>
+        <button onclick="joinGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black text-white transition-all shadow-lg uppercase">Masuk Arena</button>
     </div>
 </div>
 
-<!-- GAME UI -->
 <div id="game-container">
     <div id="board-area">
         <svg id="svg-layer" class="svg-layer"></svg>
@@ -70,15 +71,14 @@
 
     <div id="sidebar">
         <div class="ui-card text-center">
-            <p id="turn-info" class="text-yellow-500 font-bold text-sm mb-3">MENUNGGU...</p>
-            <div id="dice-btn" class="dice shadow-xl" onclick="rollDice()">
-                <span id="dice-val">?</span>
-            </div>
+            <p id="turn-info" class="text-yellow-500 font-bold text-xs mb-3 uppercase tracking-widest">CONNECTING...</p>
+            <div id="dice-btn" class="dice shadow-xl" onclick="rollDice()">1</div>
+            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase">Klik Dadu</p>
         </div>
         
         <div class="ui-card flex-1 flex flex-col overflow-hidden">
             <div id="chat-list" class="space-y-1 mb-3"></div>
-            <input id="chat-in" type="text" placeholder="Ketik bacotan..." class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs outline-none" onkeypress="if(event.key==='Enter') sendChat()">
+            <input id="chat-in" type="text" placeholder="Bacotan..." class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs outline-none" onkeypress="if(event.key==='Enter') sendChat()">
         </div>
     </div>
 </div>
@@ -99,35 +99,49 @@
     const squad = ["Lilas", "Albert", "Tegar", "Meggy", "Anjas", "Piter"];
     const jumps = { 2:38, 7:14, 8:31, 15:26, 21:42, 36:44, 51:67, 71:91, 78:98, 16:6, 46:25, 49:11, 62:19, 64:60, 74:53, 89:68, 95:75, 99:80 };
     
-    let user = '', room = '';
+    let user = '', room = '', isMoving = false;
 
-    // Hero Picker
+    // Build Hero Selector
     const hSelect = document.getElementById('hero-select');
     squad.forEach(s => {
         const btn = document.createElement('button');
         btn.innerText = s;
-        btn.className = "bg-slate-800 p-2 rounded-lg border-2 border-transparent font-bold hover:bg-slate-700";
+        btn.className = "bg-slate-800 p-2 rounded-lg border-2 border-transparent text-[10px] font-bold uppercase hover:bg-slate-700 transition-colors";
         btn.onclick = () => {
-            document.querySelectorAll('#hero-select button').forEach(b => b.classList.replace('border-yellow-500', 'border-transparent'));
-            btn.classList.replace('border-transparent', 'border-yellow-500');
+            document.querySelectorAll('#hero-select button').forEach(b => b.classList.remove('border-yellow-500', 'bg-slate-700'));
+            btn.classList.add('border-yellow-500', 'bg-slate-700');
             user = s;
         };
         hSelect.appendChild(btn);
     });
 
     function joinGame() {
-        room = document.getElementById('room-id').value.toUpperCase() || 'MAGA';
-        if(!user) return alert("Pilih Karakter!");
+        room = document.getElementById('room-id').value.toUpperCase() || 'SQUAD';
+        if(!user) return alert("Pilih Karakter Dulu Bre!");
         
-        db.ref('rooms/'+room).transaction(curr => {
-            if(!curr) return { players: [{name:user, pos:1, img: `${user.toLowerCase()}.png`}], turn:0, last:1, moving:false };
-            if(!curr.players.find(p => p.name === user)) curr.players.push({name:user, pos:1, img: `${user.toLowerCase()}.png`});
-            return curr;
-        }, () => {
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('game-container').style.display = 'flex';
-            initBoard(); listenGame();
+        db.ref('rooms/'+room).once('value', snap => {
+            let data = snap.val();
+            if(!data) {
+                db.ref('rooms/'+room).set({
+                    players: [{name:user, pos:1, img: `${user.toLowerCase()}.png`}],
+                    turn: 0, last: 1, moving: false
+                }).then(startUI);
+            } else {
+                let pList = data.players || [];
+                if(!pList.find(p => p.name === user)) {
+                    pList.push({name:user, pos:1, img: `${user.toLowerCase()}.png`});
+                    db.ref('rooms/'+room).update({players: pList, moving: false}).then(startUI);
+                } else {
+                    db.ref('rooms/'+room).update({moving: false}).then(startUI);
+                }
+            }
         });
+    }
+
+    function startUI() {
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('game-container').style.display = 'flex';
+        initBoard(); listenGame();
     }
 
     function initBoard() {
@@ -141,7 +155,7 @@
                 b.appendChild(cell);
             }
         }
-        setTimeout(drawAssets, 800);
+        setTimeout(drawAssets, 600);
     }
 
     function drawAssets() {
@@ -159,49 +173,40 @@
 
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
-            if (e > s) { // LADDER
+            if (e > s) { // TANGGA KAYU
                 const rail = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 rail.setAttribute("d", `M${x1-10},${y1} L${x2-10},${y2} M${x1+10},${y1} L${x2+10},${y2}`);
-                rail.setAttribute("class", "ladder-rail");
-                g.appendChild(rail);
+                rail.setAttribute("class", "ladder-rail"); g.appendChild(rail);
                 for(let i=1; i<5; i++) {
                     const lx = x1 + (x2-x1)*(i/5); const ly = y1 + (y2-y1)*(i/5);
                     const stp = document.createElementNS("http://www.w3.org/2000/svg", "line");
                     stp.setAttribute("x1", lx-15); stp.setAttribute("y1", ly); stp.setAttribute("x2", lx+15); stp.setAttribute("y2", ly);
                     stp.setAttribute("class", "ladder-step"); g.appendChild(stp);
                 }
-            } else { // SNAKE MAX LEVEL
+            } else { // ULAR LEVEL MAX
                 const midX = (x1 + x2) / 2 + (x1 > x2 ? 50 : -50);
                 const midY = (y1 + y2) / 2;
                 const d = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
 
-                // Body & Stripes
                 const body = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 body.setAttribute("d", d); body.setAttribute("class", "snake-body"); g.appendChild(body);
+                
                 const stripes = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 stripes.setAttribute("d", d); stripes.setAttribute("class", "snake-stripes"); g.appendChild(stripes);
 
-                // Head
                 const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
                 head.setAttribute("cx", x1); head.setAttribute("cy", y1); head.setAttribute("rx", 12); head.setAttribute("ry", 15);
                 head.setAttribute("class", "snake-head");
                 const angle = Math.atan2(y1-y2, x1-x2) * 180 / Math.PI;
-                head.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`);
-                g.appendChild(head);
+                head.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`); g.appendChild(head);
 
-                // Eyes
-                for(let side of [-4, 4]) {
-                    const eye = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                    eye.setAttribute("cx", x1 + side); eye.setAttribute("cy", y1 - 5); eye.setAttribute("r", 2);
-                    eye.setAttribute("fill", "yellow"); g.appendChild(eye);
-                }
+                // Mata & Lidah
+                const eye = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                eye.setAttribute("cx", x1); eye.setAttribute("cy", y1); eye.setAttribute("r", 2); eye.setAttribute("fill", "yellow"); g.appendChild(eye);
 
-                // Tongue (Lidah Bercabang)
                 const tongue = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 tongue.setAttribute("d", `M${x1},${y1-15} L${x1},${y1-25} M${x1},${y1-25} L${x1-4},${y1-30} M${x1},${y1-25} L${x1+4},${y1-30}`);
-                tongue.setAttribute("class", "snake-tongue");
-                tongue.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`);
-                g.appendChild(tongue);
+                tongue.setAttribute("class", "snake-tongue"); tongue.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`); g.appendChild(tongue);
             }
             svg.appendChild(g);
         });
@@ -212,8 +217,9 @@
         db.ref('rooms/'+room).on('value', snap => {
             const data = snap.val(); if(!data) return;
             const active = data.players[data.turn];
-            document.getElementById('turn-info').innerText = active.name === user ? "🔥 GILIRAN LO!" : `${active.name.toUpperCase()} LAGI JALAN`;
+            document.getElementById('turn-info').innerText = active.name === user ? "🔥 GILIRAN LO!" : `${active.name.toUpperCase()} JALAN`;
             document.getElementById('dice-val').innerText = data.last;
+            isMoving = data.moving;
 
             document.querySelectorAll('.pawn').forEach(p => p.remove());
             data.players.forEach((p, i) => {
@@ -221,6 +227,7 @@
                 const br = document.getElementById('board-area').getBoundingClientRect();
                 const div = document.createElement('div');
                 div.className = 'pawn';
+                // FIX: Path gambar dipastikan terpanggil
                 div.style.backgroundImage = `url('${p.img}')`;
                 div.style.left = `${(cell.left - br.left) + (i*5)}px`;
                 div.style.top = `${(cell.top - br.top) + (i*5)}px`;
@@ -229,9 +236,9 @@
             });
         });
 
-        db.ref('chats/'+room).limitToLast(15).on('value', s => {
+        db.ref('chats/'+room).limitToLast(12).on('value', s => {
             const box = document.getElementById('chat-list'); box.innerHTML = '';
-            s.forEach(c => { box.innerHTML += `<div><span class="text-yellow-500 font-bold">${c.val().u}:</span> ${c.val().t}</div>`; });
+            s.forEach(c => { box.innerHTML += `<div><b class="text-yellow-500">${c.val().u}:</b> ${c.val().t}</div>`; });
             box.scrollTop = box.scrollHeight;
         });
     }
@@ -239,11 +246,11 @@
     async function rollDice() {
         const snap = await db.ref('rooms/'+room).get();
         const data = snap.val();
-        if(data.players[data.turn].name !== user || data.moving) return;
+        if(!data || isMoving || data.players[data.turn].name !== user) return;
 
         const res = Math.floor(Math.random()*6)+1;
         document.getElementById('dice-btn').classList.add('rolling');
-        db.ref('rooms/'+room).update({moving:true, last:res});
+        await db.ref('rooms/'+room).update({moving: true, last: res});
 
         setTimeout(async () => {
             document.getElementById('dice-btn').classList.remove('rolling');
@@ -263,7 +270,7 @@
                 await db.ref('rooms/'+room+'/players').set(pList);
             }
 
-            if(p.pos === 100) { confetti(); alert("WINNER!"); }
+            if(p.pos === 100) { confetti(); alert("MENANG BRE!"); }
             db.ref('rooms/'+room).update({turn: (data.turn + 1) % pList.length, moving: false});
         }, 1000);
     }
