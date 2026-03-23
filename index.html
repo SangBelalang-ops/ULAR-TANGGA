@@ -2,244 +2,227 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD LADDER: THE FINAL FIX V9</title>
+    <title>SQUAD LADDER V10: THE PRO EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', sans-serif; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; border: 2px solid #fff; border-radius: 50%; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; inset: 0; pointer-events: none; color: white; z-index: 20; }
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,0.85); padding: 12px; border: 2px solid #555; border-radius: 10px; pointer-events: auto; }
-        .slot { width: 60px; height: 60px; background: #333; border: 3px solid #666; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; text-align: center; }
-        .slot.active { border-color: #00ffcc; box-shadow: 0 0 20px #00ffcc; background: #444; }
-        #stats { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; border-left: 5px solid #ff0000; }
-        #timer { position: absolute; top: 20px; right: 20px; color: #fbbf24; font-size: 32px; font-weight: 900; text-shadow: 2px 2px #000; }
-        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); color: #00ffcc; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
+        #setup { position: absolute; inset: 0; background: radial-gradient(circle, #222 0%, #000 100%); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; pointer-events: auto; }
+        .btn { padding: 15px 40px; font-size: 20px; cursor: pointer; background: #fff; border: 3px solid #00d4ff; border-radius: 12px; font-weight: bold; color: #000; transition: 0.3s; box-shadow: 0 0 15px rgba(0,212,255,0.3); }
+        .btn:hover:not(:disabled) { transform: scale(1.05); background: #00d4ff; color: #fff; }
+        .btn:disabled { background: #444; border-color: #222; cursor: not-allowed; color: #888; }
+        #log { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.85); padding: 15px; border-radius: 10px; width: 260px; border-left: 5px solid #00d4ff; height: 160px; overflow-y: auto; font-size: 14px; }
+        .status { position: absolute; top: 20px; right: 20px; font-size: 26px; font-weight: 900; color: #fbbf24; text-shadow: 2px 2px #000; }
+        input { padding: 15px; width: 250px; margin: 15px; border-radius: 8px; border: none; font-size: 18px; text-align: center; background: #333; color: #fff; }
+        #dice-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: #fff; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; font-weight: 900; color: #000; box-shadow: 0 0 50px rgba(255,255,255,0.5); opacity: 0; transition: 0.3s; pointer-events: none; border: 4px solid #ddd; }
     </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1>SQUAD LADDER V9</h1>
-    <p>ENGINE: MSI i7 OPTIMIZED | 32GB RAM OK</p>
-    <div style="background: #111; padding: 25px; border: 1px solid #00ffcc; text-align: left; margin: 20px;">
-        [1] TANGAN | [2] KAYU | [3] KACA | [4] OBOR | [5] TANAH<br>
-        KLIK KIRI: Hancurkan | KLIK KANAN: Pasang<br>
-        W,A,S,D: Jalan | SPACE: Loncat | R: Rotasi Kamera
-    </div>
-    <h2>KLIK UNTUK MULAI</h2>
+<div id="setup">
+    <h1 style="color: #00d4ff; font-size: 50px; margin-bottom: 0;">SQUAD LADDER V10</h1>
+    <p style="color: #888; letter-spacing: 3px;">REAL-TIME DATABASE & POV CAMERA</p>
+    <input type="text" id="playerName" placeholder="Nama SQUAD (Alvin/Tegar...)">
+    <button class="btn" onclick="startGame()">MASUK SERVER</button>
 </div>
 
 <div id="ui">
-    <div id="timer">08:00</div>
-    <div id="stats">HP: 100 | ITEM: <span id="item-name">TANGAN</span></div>
-    <div id="hotbar">
-        <div class="slot active" id="s1">HAND</div>
-        <div class="slot" id="s2">WOOD</div>
-        <div class="slot" id="s3">GLASS</div>
-        <div class="slot" id="s4">TORCH</div>
-        <div class="slot" id="s5">DIRT</div>
+    <div id="log"><b>GAME LOG:</b><br><span id="msg">Menghubungkan...</span></div>
+    <div class="status" id="turnInfo">GILIRAN: ---</div>
+    <div id="dice-box" id="diceDisplay">?</div>
+    <div id="controls">
+        <button id="rollBtn" class="btn" onclick="handleRoll()" disabled>KOCOK DADU! 🎲</button>
     </div>
 </div>
-<div id="crosshair"></div>
 
 <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    { "imports": { 
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+    } }
 </script>
 
 <script type="module">
     import * as THREE from 'three';
-    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    import { initializeApp } from 'firebase/app';
+    import { getDatabase, ref, set, onValue, update, get } from 'firebase/database';
 
-    // --- SETUP ---
-    let scene, camera, renderer, controls, clock;
-    let activeSlot = 1, time = 8;
-    let moveF = false, moveB = false, moveL = false, moveR = false, canJump = false;
-    let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
-    let objects = [], raycaster = new THREE.Raycaster();
-    let ghost, itemInHand;
-
-    const mats = {
-        grass: new THREE.MeshStandardMaterial({ color: 0x2d5a27 }),
-        wood: new THREE.MeshStandardMaterial({ color: 0x5d4037 }),
-        leaves: new THREE.MeshStandardMaterial({ color: 0x1a4a1a, transparent: false }),
-        glass: new THREE.MeshStandardMaterial({ color: 0xade8f4, transparent: true, opacity: 0.5, metalness: 0.5, roughness: 0.1 }),
-        torch: new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00 }),
-        dirt: new THREE.MeshStandardMaterial({ color: 0x3d2b1f })
+    const firebaseConfig = {
+        apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
+        authDomain: "ulartanggasquad.firebaseapp.com",
+        databaseURL: "https://ulartanggasquad-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "ulartanggasquad",
+        storageBucket: "ulartanggasquad.firebasestorage.app",
+        messagingSenderId: "492517449717",
+        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc"
     };
 
-    function init() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.03);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const gameRef = ref(db, 'squad_ladder/state');
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        
+    let scene, camera, renderer, myName = "", myId = null;
+    let playerModels = {}, boardPos = [];
+    let isMoving = false, targetCamPos = new THREE.Vector3(0, 16, 14);
+    let targetLookAt = new THREE.Vector3(0, 0, 0);
+
+    const LADDERS = { 3: 22, 12: 40, 28: 55, 45: 70, 72: 91 };
+    const SNAKES = { 25: 5, 52: 20, 65: 35, 88: 40, 98: 10 };
+
+    window.startGame = () => {
+        myName = document.getElementById('playerName').value.trim();
+        if(!myName) return alert("Isi nama dulu bre!");
+        document.getElementById('setup').style.display = 'none';
+        initThree();
+        syncFirebase();
+    };
+
+    function initThree() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510);
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        controls = new PointerLockControls(camera, document.body);
-        document.getElementById('overlay').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => document.getElementById('overlay').style.display='none');
-        controls.addEventListener('unlock', () => document.getElementById('overlay').style.display='flex');
-
-        clock = new THREE.Clock();
-
-        const amb = new THREE.AmbientLight(0xffffff, 0.6);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(50, 100, 50); sun.castShadow = true;
-        scene.add(amb, sun);
-        scene.userData = { sun, amb };
-
-        // WORLD
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), mats.grass);
-        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
-        scene.add(ground); objects.push(ground);
-
-        for(let i=0; i<40; i++) spawnFullTree(Math.random()*100-50, Math.random()*100-50);
-
-        // GHOST
-        ghost = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0.5}));
-        scene.add(ghost);
-
-        createHandItem();
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        createBoard();
+        createUlarTanggaVisual();
         animate();
     }
 
-    function spawnFullTree(x, z) {
-        const treeGroup = new THREE.Group();
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), mats.wood);
-        trunk.position.y = 2; trunk.castShadow = true;
-        treeGroup.add(trunk);
+    function createBoard() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 128;
+        const ctx = canvas.getContext('2d');
 
-        const leafSize = 3;
-        const leaves = new THREE.Mesh(new THREE.BoxGeometry(leafSize, leafSize, leafSize), mats.leaves);
-        leaves.position.y = 5; leaves.castShadow = true;
-        treeGroup.add(leaves);
+        for(let i=0; i<100; i++) {
+            const row = Math.floor(i / 10);
+            const col = row % 2 === 0 ? (i % 10) : (9 - (i % 10));
+            
+            // Texture Kayu Custom
+            ctx.fillStyle = (row + col) % 2 === 0 ? '#5d4037' : '#4e342e';
+            ctx.fillRect(0,0,128,128);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 50px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(i + 1, 64, 80);
 
-        treeGroup.position.set(x, 0, z);
-        treeGroup.userData = { type: 'tree', hp: 4 };
-        scene.add(treeGroup);
-        objects.push(treeGroup);
+            const tex = new THREE.CanvasTexture(canvas.cloneNode(true));
+            const tile = new THREE.Mesh(
+                new THREE.BoxGeometry(1.1, 0.2, 1.1),
+                new THREE.MeshStandardMaterial({ map: tex })
+            );
+            tile.position.set(col * 1.2 - 5.4, 0, row * 1.2 - 5.4);
+            scene.add(tile);
+            boardPos[i] = tile.position.clone();
+        }
     }
 
-    function createHandItem() {
-        if(itemInHand) camera.remove(itemInHand);
-        
-        itemInHand = new THREE.Group();
-        let model;
-        
-        if(activeSlot === 1) model = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.8), new THREE.MeshStandardMaterial({color: 0xffdbac})); // Tangan
-        else if(activeSlot === 2) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.wood); // Kayu
-        else if(activeSlot === 3) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.glass); // Kaca
-        else if(activeSlot === 4) model = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), mats.torch); // Obor
-        else if(activeSlot === 5) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.dirt); // Tanah
-
-        itemInHand.add(model);
-        itemInHand.position.set(0.6, -0.5, -0.8); // Posisi FPS
-        camera.add(itemInHand);
-        scene.add(camera);
+    function createUlarTanggaVisual() {
+        // ULAR (Tube Merah)
+        Object.entries(SNAKES).forEach(([s, e]) => {
+            const curve = new THREE.QuadraticBezierCurve3(boardPos[s], new THREE.Vector3((boardPos[s].x+boardPos[e].x)/2, 2, (boardPos[s].z+boardPos[e].z)/2), boardPos[e]);
+            scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.08, 8, false), new THREE.MeshStandardMaterial({color: 0xff0000})));
+        });
+        // TANGGA (Tube Hijau)
+        Object.entries(LADDERS).forEach(([s, e]) => {
+            const curve = new THREE.LineCurve3(boardPos[s], boardPos[e]);
+            scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 2, 0.05, 8, false), new THREE.MeshStandardMaterial({color: 0x00ff00})));
+        });
     }
 
-    window.addEventListener('mousedown', (e) => {
-        if(!controls.isLocked) return;
-        raycaster.setFromCamera(new THREE.Vector2(), camera);
+    function syncFirebase() {
+        onValue(gameRef, (snap) => {
+            const data = snap.val();
+            if(!data) return set(gameRef, { turn: 0, players: [{name: myName, pos: 0, color: '#00d4ff', won: false}] });
+
+            const serverP = data.players || [];
+            let found = false;
+            serverP.forEach((p, idx) => {
+                if(p.name === myName) { myId = idx; found = true; }
+                if(!playerModels[idx]) createPlayerModel(idx, p);
+                playerModels[idx].position.lerp(boardPos[p.pos].clone().add(new THREE.Vector3(0,0.6,0)), 0.1);
+            });
+
+            if(!found) {
+                serverP.push({name: myName, pos: 0, color: '#'+Math.floor(Math.random()*16777215).toString(16), won: false});
+                update(gameRef, { players: serverP });
+            }
+
+            const currentTurnP = serverP[data.turn];
+            document.getElementById('turnInfo').innerText = `GILIRAN: ${currentTurnP.name}`;
+            
+            // LOGIKA PEMENANG: Jika giliran jatuh ke orang yang sudah menang, skip otomatis
+            if(currentTurnP.won && data.turn === myId) {
+                const next = (data.turn + 1) % serverP.length;
+                update(gameRef, { turn: next });
+            }
+
+            // Button Aktif cuma buat yang belum menang & gilirannya
+            const me = serverP[myId];
+            document.getElementById('rollBtn').disabled = (data.turn !== myId || isMoving || me.won);
+            if(me.won) document.getElementById('turnInfo').innerText = "ANDA SUDAH FINISH! 🎉";
+        });
+    }
+
+    function createPlayerModel(id, data) {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: data.color})));
+        const loader = new THREE.TextureLoader();
+        const face = new THREE.Sprite(new THREE.SpriteMaterial({map: loader.load(`https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`)}));
+        face.position.y = 1; g.add(face);
+        scene.add(g); playerModels[id] = g;
+    }
+
+    window.handleRoll = async () => {
+        isMoving = true;
+        const roll = Math.floor(Math.random() * 6) + 1;
         
-        if(e.button === 0) { // LEFT CLICK: MINING
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5) {
-                let target = hits[0].object;
-                while(target.parent !== scene && target.parent !== null) target = target.parent;
-                if(target !== objects[0]) {
-                    scene.remove(target);
-                    objects.splice(objects.indexOf(target), 1);
-                }
-            }
-            // Animasi Pukul
-            itemInHand.position.z += 0.2; setTimeout(() => itemInHand.position.z -= 0.2, 100);
-        } else if(e.button === 2) { // RIGHT CLICK: BUILD
-            if(activeSlot === 1) return;
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5) {
-                let block;
-                if(activeSlot === 2) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.wood);
-                if(activeSlot === 3) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.glass);
-                if(activeSlot === 4) {
-                    block = new THREE.Group();
-                    block.add(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), mats.torch));
-                    const l = new THREE.PointLight(0xffaa00, 10, 12); l.position.y = 0.5;
-                    block.add(l);
-                }
-                if(activeSlot === 5) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.dirt);
+        // Show Dadu Putih
+        const dice = document.getElementById('dice-box');
+        dice.innerText = roll; dice.style.opacity = "1";
+        setTimeout(() => dice.style.opacity = "0", 1200);
 
-                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
-                block.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-                scene.add(block);
-                objects.push(block);
-            }
-        }
-    });
+        const snap = await get(gameRef);
+        const data = snap.val();
+        let p = data.players[myId];
+        let newPos = p.pos + roll;
 
-    window.addEventListener('keydown', (e) => {
-        if(e.code === 'KeyW') moveF = true; if(e.code === 'KeyS') moveB = true;
-        if(e.code === 'KeyA') moveL = true; if(e.code === 'KeyD') moveR = true;
-        if(e.code === 'Space' && canJump) { velocity.y += 12; canJump = false; }
-        if(e.key >= '1' && e.key <= '5') {
-            activeSlot = parseInt(e.key);
-            document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-            document.getElementById('s'+e.key).classList.add('active');
-            document.getElementById('item-name').innerText = document.getElementById('s'+e.key).innerText;
-            createHandItem();
-        }
-    });
-    window.addEventListener('keyup', (e) => {
-        if(e.code === 'KeyW') moveF = false; if(e.code === 'KeyS') moveB = false;
-        if(e.code === 'KeyA') moveL = false; if(e.code === 'KeyD') moveR = false;
-    });
+        // POV Camera
+        targetCamPos.set(playerModels[myId].position.x, 4, playerModels[myId].position.z + 4);
+        targetLookAt.copy(playerModels[myId].position);
+
+        setTimeout(() => {
+            if(newPos >= 99) {
+                newPos = 99; p.won = true;
+                addLog("SELAMAT! Kamu Finish!");
+            }
+            if(LADDERS[newPos]) newPos = LADDERS[newPos];
+            if(SNAKES[newPos]) newPos = SNAKES[newPos];
+
+            const updated = data.players;
+            updated[myId].pos = newPos;
+            updated[myId].won = p.won;
+            
+            const nextTurn = (data.turn + 1) % updated.length;
+            update(gameRef, { turn: nextTurn, players: updated });
+
+            targetCamPos.set(0, 16, 14);
+            targetLookAt.set(0, 0, 0);
+            isMoving = false;
+        }, 1500);
+    };
+
+    function addLog(m) { document.getElementById('msg').innerHTML = `> ${m}<br>` + document.getElementById('msg').innerHTML; }
 
     function animate() {
         requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-
-        if(controls.isLocked) {
-            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta;
-            velocity.y -= 9.8 * 4 * delta;
-            direction.z = Number(moveF) - Number(moveB); direction.x = Number(moveR) - Number(moveL);
-            direction.normalize();
-            if(moveF || moveB) velocity.z -= direction.z * 150 * delta;
-            if(moveL || moveR) velocity.x -= direction.x * 150 * delta;
-            controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
-            camera.position.y += velocity.y * delta;
-            if(camera.position.y < 2) { velocity.y = 0; camera.position.y = 2; canJump = true; }
-
-            // Ghost Logic
-            raycaster.setFromCamera(new THREE.Vector2(), camera);
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5 && activeSlot > 1) {
-                ghost.visible = true;
-                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
-                ghost.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-            } else { ghost.visible = false; }
-
-            // Time & Light
-            time += delta * 0.1;
-            const hour = Math.floor(time) % 24;
-            document.getElementById('timer').innerText = (hour < 10 ? '0'+hour : hour) + ":00";
-            const isNight = hour >= 18 || hour < 6;
-            scene.background.set(isNight ? 0x050515 : 0x87CEEB);
-            scene.userData.sun.intensity = isNight ? 0 : 1.2;
-            scene.userData.amb.intensity = isNight ? 0.05 : 0.6;
-            
-            // Item Sway (Goyang pas jalan)
-            if(moveF || moveB || moveL || moveR) {
-                itemInHand.position.y = -0.5 + Math.sin(Date.now()*0.01)*0.02;
-            }
-        }
+        camera.position.lerp(targetCamPos, 0.05);
+        camera.lookAt(targetLookAt);
         renderer.render(scene, camera);
     }
-
-    init();
-    window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>
 </html>
