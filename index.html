@@ -2,250 +2,156 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>CYBER SURGE: GOD MODE</title>
+    <title>SQUAD STICKMAN: HAPPY WORLD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        canvas { filter: drop-shadow(0 0 10px #06b6d4); cursor: crosshair; }
-        .ui-overlay { position: absolute; inset: 0; pointer-events: none; padding: 20px; color: #fff; }
-        .upgrade-card { background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; padding: 10px; border-radius: 4px; animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { transform: translateX(-100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Fredoka One', cursive; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { background: #fdf6e3; border: 8px solid #fff; border-radius: 30px; box-shadow: 0 10px 0 #ddd; }
+        .ui { position: absolute; top: 20px; width: 750px; display: flex; justify-content: space-between; pointer-events: none; }
+        .heart { font-size: 30px; filter: drop-shadow(0 2px 0 #000); }
     </style>
 </head>
 <body>
 
-    <div class="ui-overlay flex flex-col justify-between">
-        <div class="flex justify-between">
-            <div class="w-64">
-                <div class="text-[10px] text-cyan-400 mb-1">SYSTEM INTEGRITY</div>
-                <div class="h-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <div id="hp-bar" class="h-full bg-cyan-500 w-full transition-all"></div>
-                </div>
-                <div id="upgrade-menu" class="mt-4 space-y-2 pointer-events-auto hidden">
-                    <p class="text-[9px] text-yellow-400 animate-pulse">UPGRADE READY! [Press 1-3]</p>
-                    <div class="upgrade-card text-[10px]" id="up-1">1. OVERDRIVE (+DMG)</div>
-                    <div class="upgrade-card text-[10px]" id="up-2">2. REACTION (+SPEED)</div>
-                    <div class="upgrade-card text-[10px]" id="up-3">3. REPAIR (RESTORE HP)</div>
-                </div>
-            </div>
-            <div class="text-right">
-                <p id="score-text" class="text-2xl font-black text-cyan-400 italic">000000</p>
-                <p id="level-text" class="text-[10px] text-fuchsia-500">LEVEL 1</p>
-            </div>
+    <div class="ui">
+        <div class="bg-white/80 p-4 rounded-2xl border-4 border-yellow-400">
+            <p id="char-tag" class="text-orange-500 text-xs">Pahlawan: LILAS</p>
+            <div id="hearts-container" class="flex gap-1">❤️❤️❤️❤️❤️</div>
         </div>
-        <div id="boss-warning" class="hidden text-center text-red-500 animate-ping font-black text-4xl">BOSS INCOMING</div>
+        <div class="text-center">
+            <h1 class="text-4xl text-white drop-shadow-md">STAGE <span id="wave-num">1</span></h1>
+            <p class="text-blue-600 bg-white rounded-full px-4 py-1 text-sm shadow-sm">SKOR: <span id="score">0</span></p>
+        </div>
     </div>
 
-    <canvas id="gameCanvas" width="900" height="500"></canvas>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // CONFIG & STATE
-    let score = 0, level = 1, xp = 0, hp = 100, active = true, shake = 0, time = 0;
-    let upAvailable = false, bossActive = false;
-    const keys = {};
+    // CONFIG GAMPANG BANGET
+    let score = 0, wave = 1, hp = 5, gameActive = true, time = 0;
+    const squad = ["LILAS", "MEGGY", "ALBERT", "ANJAS", "TEGAR", "PITER"];
+    const colors = ["#FF5733", "#C70039", "#900C3F", "#581845", "#1ABC9C", "#3498DB"];
+    let currentChar = 0;
 
-    const player = { 
-        x: 100, y: 250, w: 70, h: 40, // Ukuran disesuaiin buat bentuk baru
-        spd: 6, dmg: 1.5 };
-    let bullets = [], enemies = [], particles = [], boss = null;
+    const player = { x: 100, y: 250, w: 40, h: 70, dy: 0, grounded: true };
+    let bullets = [], enemies = [], items = [], fx = [];
 
-    // INPUT
+    // FOTO KEPALA (Cek Folder!)
+    const headImgs = squad.map(name => {
+        const img = new Image();
+        img.src = name.toLowerCase() + ".png";
+        return img;
+    });
+
     window.onkeydown = (e) => {
-        keys[e.code] = true;
-        if(upAvailable) {
-            if(e.key === '1') applyUp('dmg');
-            if(e.key === '2') applyUp('spd');
-            if(e.key === '3') applyUp('hp');
+        if(e.key >= 1 && e.key <= 6) { 
+            currentChar = e.key - 1; 
+            document.getElementById('char-tag').innerText = "Pahlawan: " + squad[currentChar];
         }
+        if(e.code === 'Space' || e.code === 'KeyF') shoot();
+        if(e.code === 'KeyW' && player.grounded) { player.dy = -15; player.grounded = false; }
     };
-    window.onkeyup = (e) => keys[e.code] = false;
 
-    function applyUp(type) {
-        if(type === 'dmg') player.dmg += 0.5;
-        if(type === 'spd') player.spd += 1;
-        if(type === 'hp') hp = Math.min(100, hp + 40);
-        upAvailable = false;
-        document.getElementById('upgrade-menu').classList.add('hidden');
+    function shoot() {
+        // Peluru Gede Biar Gampang Kena
+        bullets.push({ x: player.x + 40, y: player.y + 30, vx: 10, r: 12 });
     }
 
-    function spawnBoss() {
-        bossActive = true;
-        document.getElementById('boss-warning').classList.remove('hidden');
-        setTimeout(() => {
-            document.getElementById('boss-warning').classList.add('hidden');
-            boss = { x: 1000, y: 100, w: 100, h: 300, hp: 1000 + (level*200), maxHp: 1000 + (level*200), lastShot: 0 };
-        }, 2000);
-    }
-
-    function createExplosion(x, y, color) {
-        for(let i=0; i<15; i++) {
-            particles.push({ x, y, vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, life: 1, c: color });
+    function createExplosion(x, y) {
+        for(let i=0; i<10; i++) {
+            fx.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1, c: colors[Math.floor(Math.random()*6)] });
         }
     }
 
     function update() {
-        if(!active) return;
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.fillRect(0,0,900,500);
+        if(!gameActive) return;
+        ctx.clearRect(0, 0, 800, 400);
 
-        // Grid Movement
-        ctx.strokeStyle = '#06b6d411';
-        for(let i=0; i<900; i+=50) {
-            ctx.beginPath(); ctx.moveTo(i - (time%50), 0); ctx.lineTo(i - (time%50), 500); ctx.stroke();
+        // Langit & Rumput
+        ctx.fillStyle = "#7cfc00"; ctx.fillRect(0, 320, 800, 80);
+
+        // Player Stickman Lucu
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(player.x+20, player.y+30); ctx.lineTo(player.x+20, player.y+60); // Badan
+        ctx.moveTo(player.x+20, player.y+60); ctx.lineTo(player.x+10, player.y+80); // Kaki
+        ctx.moveTo(player.x+20, player.y+60); ctx.lineTo(player.x+30, player.y+80);
+        ctx.stroke();
+
+        try {
+            ctx.drawImage(headImgs[currentChar], player.x, player.y, 40, 40);
+        } catch(e) {
+            ctx.fillStyle = colors[currentChar]; ctx.beginPath(); ctx.arc(player.x+20, player.y+20, 20, 0, Math.PI*2); ctx.fill();
         }
 
-        // Screen Shake
-        if(shake > 0) { ctx.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake *= 0.9; }
+        // Loncat
+        player.y += player.dy; player.dy += 0.8;
+        if(player.y > 240) { player.y = 240; player.dy = 0; player.grounded = true; }
 
-        // Player Draw
-        function drawPlayer(x, y) {
-        ctx.save();
-        ctx.translate(x, y);
-        
-        // Effects: Trail & Glow
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#06b6d4';
-        
-        // --- BODY UTAMA (Stealth Design) ---
-        ctx.fillStyle = '#fff'; // Warna dasar putih neon
-        ctx.beginPath();
-        ctx.moveTo(35, 0);   // Moncong Depan
-        ctx.lineTo(-10, -15); // Sayap Kiri Atas
-        ctx.lineTo(-5, -5);   // Body Tengah Kiri
-        ctx.lineTo(-25, -20); // Sayap Belakang Kiri
-        ctx.lineTo(-20, 0);   // Ekor Tengah
-        ctx.lineTo(-25, 20);  // Sayap Belakang Kanan
-        ctx.lineTo(-5, 5);    // Body Tengah Kanan
-        ctx.lineTo(-10, 15);  // Sayap Kanan Atas
-        ctx.closePath();
-        ctx.fill();
-        
-        // --- DETAIL COCKPIT (Kaca Pilot Neon) ---
-        ctx.shadowBlur = 10; ctx.shadowColor = '#fde047'; // Glow Kuning
-        ctx.fillStyle = '#facc15'; 
-        ctx.beginPath();
-        ctx.moveTo(20, 0);
-        ctx.lineTo(5, -6);
-        ctx.lineTo(-5, 0);
-        ctx.lineTo(5, 6);
-        ctx.closePath();
-        ctx.fill();
-
-        // --- THRUSTER ENGINE (Mesin Jet Belakang) ---
-        // Efek api mesin kedap-kedip pake Math.sin
-        const thrusterGlow = 10 + Math.sin(time * 0.5) * 5;
-        ctx.shadowBlur = thrusterGlow; ctx.shadowColor = '#d946ef'; // Glow Pink
-        ctx.fillStyle = '#fff'; // Inti api putih
-        
-        // Mesin Kiri
-        ctx.fillRect(-22, -12, 6, 8); 
-        // Mesin Kanan
-        ctx.fillRect(-22, 4, 6, 8);
-        
-        ctx.restore();
-        ctx.shadowBlur = 0; // Reset shadow biar ga bocor ke objek lain
-    }
-
-    // === JANGAN LUPA PANGGIL FUNGSI BARUNYA DI DALEM UPDATE() ===
-    // Cari baris: player.draw();
-    // Ganti jadi: drawPlayer(player.x, player.y);
-
-        // Player Move
-        if(keys['KeyW']) player.y -= player.spd;
-        if(keys['KeyS']) player.y += player.spd;
-        if(keys['KeyA']) player.x -= player.spd;
-        if(keys['KeyD']) player.x += player.spd;
-
-        // Shooting
-        if(time % 10 === 0) bullets.push({ x: player.x+20, y: player.y, vx: 18, type: 'P' });
-
-        // Bullets
-        bullets.forEach((b, i) => {
-            b.x += b.vx;
-            ctx.fillStyle = b.type === 'P' ? '#06b6d4' : '#f43f5e';
-            ctx.fillRect(b.x, b.y-2, 20, 4);
-            if(b.x > 900 || b.x < -50) bullets.splice(i, 1);
-        });
-
-        // Boss Logic
-        if(boss) {
-            if(boss.x > 750) boss.x -= 2;
-            ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 4;
-            ctx.strokeRect(boss.x, boss.y, boss.w, boss.h);
-            ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
-            
-            // Boss Shoot
-            if(time % 40 === 0) bullets.push({ x: boss.x, y: boss.y + Math.random()*boss.h, vx: -10, type: 'E' });
-
-            bullets.forEach((b, bi) => {
-                if(b.type === 'P' && b.x > boss.x && b.y > boss.y && b.y < boss.y+boss.h) {
-                    boss.hp -= player.dmg * 5; bullets.splice(bi, 1);
-                    if(boss.hp <= 0) { 
-                        createExplosion(boss.x+50, boss.y+150, '#f43f5e');
-                        boss = null; bossActive = false; score += 2000; shake = 40;
-                    }
-                }
-            });
-        }
-
-        // Enemies
-        if(!bossActive && time % 40 === 0) {
-            enemies.push({ x: 950, y: Math.random()*450+25, hp: 2 + level, spd: 3 + Math.random()*3 });
+        // Musuh (Monster Lucu)
+        if(time % 100 === 0) {
+            enemies.push({ x: 850, y: 260, w: 50, h: 50, c: colors[Math.floor(Math.random()*6)] });
         }
 
         enemies.forEach((e, i) => {
-            e.x -= e.spd;
-            ctx.fillStyle = '#f43f5e';
-            ctx.beginPath();
-            ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+20, e.y-15); ctx.lineTo(e.x+40, e.y); ctx.lineTo(e.x+20, e.y+15); ctx.fill();
+            e.x -= (2 + wave*0.2); // Pelan-pelan jalannya
+            ctx.fillStyle = e.c;
+            ctx.beginPath(); ctx.roundRect(e.x, e.y, e.w, e.h, 15); ctx.fill();
+            // Mata monster
+            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x+15, e.y+15, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(e.x+15, e.y+15, 3, 0, Math.PI*2); ctx.fill();
 
-            bullets.forEach((b, bi) => {
-                if(b.type === 'P' && Math.hypot(b.x-e.x, b.y-e.y) < 25) {
-                    e.hp -= player.dmg; bullets.splice(bi, 1);
-                    if(e.hp <= 0) {
-                        createExplosion(e.x, e.y, '#f43f5e');
-                        enemies.splice(i, 1); score += 100; xp += 20;
-                    }
+            // Tabrakan
+            if(Math.hypot(e.x-player.x, e.y-player.y) < 40) {
+                enemies.splice(i, 1);
+                hp--; updateHearts();
+                if(hp <= 0) hp = 5; // Kasih nyawa lagi biar ga tamat-tamat
+            }
+        });
+
+        // Peluru
+        bullets.forEach((b, i) => {
+            b.x += b.vx;
+            ctx.fillStyle = "#FFD700";
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+            
+            enemies.forEach((e, ei) => {
+                if(b.x > e.x && b.x < e.x+50 && b.y > e.y && b.y < e.y+50) {
+                    createExplosion(e.x+25, e.y+25);
+                    enemies.splice(ei, 1);
+                    bullets.splice(i, 1);
+                    score += 10;
+                    document.getElementById('score').innerText = score;
                 }
             });
-
-            if(Math.hypot(e.x-player.x, e.y-player.y) < 30) { hp -= 10; enemies.splice(i, 1); shake = 10; }
         });
 
-        // XP & Level Up
-        if(xp >= 100) {
-            level++; xp = 0; upAvailable = true;
-            document.getElementById('upgrade-menu').classList.remove('hidden');
-            if(score > 0 && score % 2000 === 0) spawnBoss();
-        }
-
-        // Particles
-        particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-            ctx.fillStyle = p.c + Math.floor(p.life*255).toString(16);
-            ctx.fillRect(p.x, p.y, 4, 4);
-            if(p.life <= 0) particles.splice(i, 1);
+        // Efek Ledakan
+        fx.forEach((f, i) => {
+            f.x += f.vx; f.y += f.vy; f.life -= 0.02;
+            ctx.fillStyle = f.c; ctx.globalAlpha = f.life;
+            ctx.fillRect(f.x, f.y, 6, 6);
+            if(f.life <= 0) fx.splice(i, 1);
         });
+        ctx.globalAlpha = 1;
 
-        // UI
-        document.getElementById('hp-bar').style.width = hp + "%";
-        document.getElementById('score-text').innerText = score.toString().padStart(6, '0');
-        document.getElementById('level-text').innerText = "LEVEL " + level;
-
-        if(hp <= 0) {
-            active = false;
-            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0,0,900,500);
-            ctx.fillStyle = "#f43f5e"; ctx.textAlign = "center"; ctx.font = "bold 50px Orbitron";
-            ctx.fillText("FATAL ERROR", 450, 250);
+        // Auto Next Stage
+        if(score > wave * 100) {
+            wave++;
+            document.getElementById('wave-num').innerText = wave;
         }
 
         time++;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
         requestAnimationFrame(update);
+    }
+
+    function updateHearts() {
+        let h = ""; for(let i=0; i<hp; i++) h += "❤️";
+        document.getElementById('hearts-container').innerText = h;
     }
 
     update();
