@@ -2,44 +2,47 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD CRAFT: PRO SURVIVAL</title>
+    <title>SQUAD CRAFT: MSI ULTRA EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 15px; height: 15px; border: 2px solid #fff; pointer-events: none; mix-blend-mode: difference; }
-        #gui { position: absolute; inset: 0; pointer-events: none; }
-        #inventory { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 5px; pointer-events: auto; }
-        .slot { width: 50px; height: 50px; background: #444; border: 3px solid #888; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; position: relative; }
-        .slot.active { border-color: #fff; box-shadow: 0 0 10px #fff; }
-        .count { position: absolute; bottom: 2px; right: 2px; font-size: 12px; color: #0f0; }
-        #stats { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; }
-        #timer { position: absolute; top: 20px; right: 20px; color: #ffcc00; font-weight: bold; font-size: 20px; }
-        #instructions { position: absolute; inset: 0; background: rgba(0,0,0,0.95); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; text-align: center; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; }
+        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 2px solid #fff; pointer-events: none; mix-blend-mode: difference; }
+        #ui { position: absolute; inset: 0; pointer-events: none; color: white; }
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 10px; border: 2px solid #444; pointer-events: auto; }
+        .slot { width: 55px; height: 55px; background: #222; border: 3px solid #555; display: flex; align-items: center; justify-content: center; font-size: 10px; position: relative; }
+        .slot.active { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+        #health-container { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); width: 200px; height: 15px; background: #444; border: 2px solid #000; }
+        #health-bar { height: 100%; background: #ff0000; width: 100%; transition: 0.2s; }
+        #timer { position: absolute; top: 20px; right: 20px; font-size: 30px; font-weight: bold; color: #fbbf24; }
+        #overlay { position: absolute; inset: 0; background: rgba(255,0,0,0); pointer-events: none; transition: 0.3s; }
+        #menu { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="instructions">
-    <h1 style="color: #0f0;">SQUAD CRAFT: SURVIVAL EXTREME</h1>
-    <p>MSI i7 ENGINE DETECTED - LOADING VOXEL SYSTEM...</p>
-    <div style="text-align: left; background: #222; padding: 20px; border: 2px solid #444; margin: 20px;">
-        [1] TANGAN - [2] DINDING - [3] JENDELA - [4] OBOR<br>
-        KLIK KIRI: Hancurkan | KLIK KANAN: Pasang<br>
-        W,A,S,D: Jalan | SPACE: Loncat | R: Rotasi
+<div id="menu">
+    <h1 style="color: #00ff00; font-size: 50px;">SQUAD CRAFT ULTRA</h1>
+    <p>HARDWARE: MSI i7 32GB RAM DETECTED</p>
+    <div style="background: #111; padding: 20px; border: 1px solid #00ff00; line-height: 1.8;">
+        <b>1-5:</b> Pilih Item | <b>WASD:</b> Gerak | <b>SPACE:</b> Loncat<br>
+        <b>KLIK KIRI:</b> Hancurkan/Serang | <b>KLIK KANAN:</b> Pasang Blok<br>
+        <b>ZOMBIE MUNCUL SAAT MALAM!</b>
     </div>
-    <h2>KLIK UNTUK MAIN</h2>
+    <h2 style="margin-top: 30px; animation: blink 1s infinite;">KLIK UNTUK SURVIVAL</h2>
 </div>
 
-<div id="gui">
-    <div id="stats">STATUS: <span id="time-status">SIANG</span></div>
-    <div id="timer">08:00</div>
-    <div id="crosshair"></div>
-    <div id="inventory">
+<div id="ui">
+    <div id="overlay"></div>
+    <div id="timer">12:00</div>
+    <div id="health-container"><div id="health-bar"></div></div>
+    <div id="hotbar">
         <div class="slot active" id="s1">TANGAN</div>
-        <div class="slot" id="s2">WALL<div class="count" id="c2">0</div></div>
-        <div class="slot" id="s3">GLASS<div class="count" id="c3">0</div></div>
-        <div class="slot" id="s4">TORCH<div class="count" id="c4">0</div></div>
+        <div class="slot" id="s2">KAYU</div>
+        <div class="slot" id="s3">KACA</div>
+        <div class="slot" id="s4">OBOR</div>
+        <div class="slot" id="s5">TANAH</div>
     </div>
 </div>
+<div id="crosshair"></div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
@@ -49,29 +52,30 @@
     import * as THREE from 'three';
     import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-    // --- CONFIG & GLOBALS ---
+    // --- GAME ENGINE VARIABLES ---
     let scene, camera, renderer, controls, clock;
-    let wood = 0, glass = 0, torches = 0, activeSlot = 1;
+    let hp = 100, time = 12, activeSlot = 1;
     let moveF = false, moveB = false, moveL = false, moveR = false, canJump = false;
     let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
-    let objects = [], raycaster = new THREE.Raycaster();
-    let ghost, buildRot = 0, time = 8; // Start at 8 AM
+    let objects = [], zombies = [], raycaster = new THREE.Raycaster();
+    let ghost;
 
     // --- MATERIALS ---
     const mats = {
-        grass: new THREE.MeshStandardMaterial({ color: 0x4d9043 }),
-        dirt: new THREE.MeshStandardMaterial({ color: 0x5d4037 }),
-        wood: new THREE.MeshStandardMaterial({ color: 0x8d6e63 }),
-        glass: new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 }),
-        torch: new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00 })
+        grass: new THREE.MeshStandardMaterial({ color: 0x34d399 }),
+        wood: new THREE.MeshStandardMaterial({ color: 0x78350f }),
+        glass: new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.4 }),
+        torch: new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15 }),
+        dirt: new THREE.MeshStandardMaterial({ color: 0x451a03 }),
+        zombie: new THREE.MeshStandardMaterial({ color: 0x166534 })
     };
 
     function init() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.05);
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.04);
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 500);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -79,113 +83,106 @@
         document.body.appendChild(renderer.domElement);
 
         controls = new PointerLockControls(camera, document.body);
-        document.getElementById('instructions').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => document.getElementById('instructions').style.display='none');
-        controls.addEventListener('unlock', () => document.getElementById('instructions').style.display='flex');
+        document.getElementById('menu').addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => document.getElementById('menu').style.display='none');
+        controls.addEventListener('unlock', () => document.getElementById('menu').style.display='flex');
 
         clock = new THREE.Clock();
 
         // LIGHTS
-        const amb = new THREE.AmbientLight(0xffffff, 0.5);
+        const amb = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(amb);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
         sun.position.set(50, 100, 50);
         sun.castShadow = true;
-        scene.add(sun);
-        scene.userData.sun = sun;
-        scene.userData.amb = amb;
+        scene.add(sun, amb);
+        scene.userData = { sun, amb };
 
-        // GROUND & TREES
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100), mats.grass);
+        // WORLD GEN
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), mats.grass);
         ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
         scene.add(ground);
         objects.push(ground);
 
-        for(let i=0; i<30; i++) spawnTree(Math.random()*60-30, Math.random()*60-30);
+        for(let i=0; i<40; i++) spawnTree(Math.random()*100-50, Math.random()*100-50);
 
-        // GHOST
-        ghost = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.05, 1.05), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
+        // GHOST PREVIEW
+        ghost = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
         scene.add(ghost);
 
-        createFPSView();
         animate();
     }
 
     function spawnTree(x, z) {
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), mats.dirt);
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), mats.wood);
         trunk.position.set(x, 2, z); trunk.castShadow = true;
         trunk.userData = { type: 'tree', hp: 3 };
         scene.add(trunk);
         objects.push(trunk);
     }
 
-    function createFPSView() {
-        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.6), mats.wood);
-        hand.position.set(0.4, -0.3, -0.5);
-        camera.add(hand);
-        scene.add(camera);
+    function spawnZombie() {
+        const zomb = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), mats.zombie);
+        const angle = Math.random() * Math.PI * 2;
+        zomb.position.set(camera.position.x + Math.cos(angle)*30, 1, camera.position.z + Math.sin(angle)*30);
+        zomb.userData = { type: 'zombie', hp: 2 };
+        scene.add(zomb);
+        zombies.push(zomb);
     }
 
-    // --- GAMEPLAY LOGIC ---
+    // --- INTERACTION ---
     window.addEventListener('mousedown', (e) => {
         if(!controls.isLocked) return;
         raycaster.setFromCamera(new THREE.Vector2(), camera);
-        const hit = raycaster.intersectObjects(objects);
-
-        if(e.button === 0) { // LEFT: DESTROY
-            if(hit.length > 0 && hit[0].distance < 5) {
-                const obj = hit[0].object;
-                if(obj.userData.type === 'tree') {
-                    obj.userData.hp--;
-                    if(obj.userData.hp <= 0) {
-                        wood += 10; glass += 2; torches += 1; // Bonus for Alvin
-                        updateUI();
-                        scene.remove(obj);
-                        objects.splice(objects.indexOf(obj), 1);
+        
+        if(e.button === 0) { // ATTACK/MINE
+            const hits = raycaster.intersectObjects([...objects, ...zombies]);
+            if(hits.length > 0 && hits[0].distance < 4) {
+                const target = hits[0].object;
+                if(target.userData.type === 'zombie') {
+                    target.userData.hp--;
+                    if(target.userData.hp <= 0) {
+                        scene.remove(target);
+                        zombies.splice(zombies.indexOf(target), 1);
                     }
-                } else if(obj !== objects[0]) { // Don't destroy ground
-                    scene.remove(obj);
-                    objects.splice(objects.indexOf(obj), 1);
+                } else if(target.userData.type === 'tree') {
+                    target.userData.hp--;
+                    if(target.userData.hp <= 0) {
+                        scene.remove(target);
+                        objects.splice(objects.indexOf(target), 1);
+                    }
+                } else if(target !== objects[0]) {
+                    scene.remove(target);
+                    objects.splice(objects.indexOf(target), 1);
                 }
             }
-        } else if(e.button === 2) { // RIGHT: PLACE
-            if(activeSlot > 1 && hit.length > 0 && hit[0].distance < 5) {
-                if(activeSlot === 2 && wood < 1) return;
-                if(activeSlot === 3 && glass < 1) return;
-                if(activeSlot === 4 && torches < 1) return;
-
+        } else if(e.button === 2) { // BUILD
+            if(activeSlot === 1) return;
+            const hits = raycaster.intersectObjects(objects);
+            if(hits.length > 0 && hits[0].distance < 5) {
                 let block;
-                if(activeSlot === 2) { block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.wood); wood--; }
-                if(activeSlot === 3) { block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.glass); glass--; }
-                if(activeSlot === 4) { 
+                if(activeSlot === 2) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.wood);
+                if(activeSlot === 3) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.glass);
+                if(activeSlot === 4) {
                     block = new THREE.Group();
-                    const stick = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), mats.torch);
-                    const pLight = new THREE.PointLight(0xffaa00, 15, 10);
-                    block.add(stick, pLight);
-                    torches--;
+                    block.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.1), mats.torch));
+                    block.add(new THREE.PointLight(0xfacc15, 10, 8));
                 }
+                if(activeSlot === 5) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.dirt);
 
-                const pos = hit[0].point.add(hit[0].face.normal.multiplyScalar(0.5));
+                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
                 block.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-                if(activeSlot !== 4) block.castShadow = true;
                 scene.add(block);
                 objects.push(block);
-                updateUI();
             }
         }
     });
-
-    function updateUI() {
-        document.getElementById('c2').innerText = wood;
-        document.getElementById('c3').innerText = glass;
-        document.getElementById('c4').innerText = torches;
-    }
 
     window.addEventListener('keydown', (e) => {
         if(e.code === 'KeyW') moveF = true; if(e.code === 'KeyS') moveB = true;
         if(e.code === 'KeyA') moveL = true; if(e.code === 'KeyD') moveR = true;
         if(e.code === 'Space' && canJump) { velocity.y += 12; canJump = false; }
-        if(e.key >= '1' && e.key <= '4') {
+        if(e.key >= '1' && e.key <= '5') {
             activeSlot = parseInt(e.key);
             document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
             document.getElementById('s'+e.key).classList.add('active');
@@ -196,62 +193,62 @@
         if(e.code === 'KeyA') moveL = false; if(e.code === 'KeyD') moveR = false;
     });
 
-    // --- MAIN LOOP ---
+    // --- MAIN ENGINE LOOP ---
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
 
         if(controls.isLocked) {
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
-            velocity.y -= 9.8 * 4.0 * delta;
-
-            direction.z = Number(moveF) - Number(moveB);
-            direction.x = Number(moveR) - Number(moveL);
+            // Player Movement
+            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta;
+            velocity.y -= 9.8 * 4 * delta;
+            direction.z = Number(moveF) - Number(moveB); direction.x = Number(moveR) - Number(moveL);
             direction.normalize();
-
-            if(moveF || moveB) velocity.z -= direction.z * 150.0 * delta;
-            if(moveL || moveR) velocity.x -= direction.x * 150.0 * delta;
-
-            controls.moveRight(-velocity.x * delta);
-            controls.moveForward(-velocity.z * delta);
+            if(moveF || moveB) velocity.z -= direction.z * 150 * delta;
+            if(moveL || moveR) velocity.x -= direction.x * 150 * delta;
+            controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
             camera.position.y += velocity.y * delta;
-
             if(camera.position.y < 2) { velocity.y = 0; camera.position.y = 2; canJump = true; }
 
-            // Ghost Snapping
+            // Ghost Logic
             raycaster.setFromCamera(new THREE.Vector2(), camera);
-            const hit = raycaster.intersectObjects(objects);
-            if(hit.length > 0 && hit[0].distance < 5 && activeSlot > 1) {
+            const hits = raycaster.intersectObjects(objects);
+            if(hits.length > 0 && hits[0].distance < 5 && activeSlot > 1) {
                 ghost.visible = true;
-                const pos = hit[0].point.add(hit[0].face.normal.multiplyScalar(0.5));
+                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
                 ghost.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
             } else { ghost.visible = false; }
 
             // Day/Night Cycle
-            time += delta * 0.1;
+            time += delta * 0.05;
             const hour = Math.floor(time) % 24;
-            const min = Math.floor((time % 1) * 60);
-            document.getElementById('timer').innerText = (hour < 10 ? '0'+hour : hour) + ":" + (min < 10 ? '0'+min : min);
+            document.getElementById('timer').innerText = (hour < 10 ? '0'+hour : hour) + ":00";
             
-            if(hour >= 18 || hour < 6) { // Night
-                scene.background.set(0x050510);
-                scene.fog.color.set(0x050510);
-                scene.userData.sun.intensity = 0;
-                scene.userData.amb.intensity = 0.1;
-                document.getElementById('time-status').innerText = "MALAM";
-            } else { // Day
-                scene.background.set(0x87CEEB);
-                scene.fog.color.set(0x87CEEB);
-                scene.userData.sun.intensity = 1;
-                scene.userData.amb.intensity = 0.5;
-                document.getElementById('time-status').innerText = "SIANG";
-            }
+            const isNight = (hour >= 18 || hour < 6);
+            scene.background.set(isNight ? 0x050510 : 0x87CEEB);
+            scene.userData.sun.intensity = isNight ? 0 : 1;
+            scene.userData.amb.intensity = isNight ? 0.1 : 0.6;
+
+            // Zombie Logic
+            if(isNight && Math.random() < 0.01 && zombies.length < 5) spawnZombie();
+            zombies.forEach(z => {
+                const zDir = new THREE.Vector3().subVectors(camera.position, z.position).normalize();
+                z.position.add(zDir.multiplyScalar(delta * 3));
+                z.position.y = 1;
+                if(z.position.distanceTo(camera.position) < 1.5) {
+                    hp -= 0.5;
+                    document.getElementById('health-bar').style.width = hp + "%";
+                    document.getElementById('overlay').style.background = "rgba(255,0,0,0.3)";
+                    setTimeout(() => document.getElementById('overlay').style.background = "rgba(255,0,0,0)", 100);
+                }
+            });
+
+            if(hp <= 0) { location.reload(); alert("MODIAR LO! Zombie menang."); }
         }
         renderer.render(scene, camera);
     }
-
-    window.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    window.oncontextmenu = (e) => e.preventDefault();
     init();
 </script>
 </body>
