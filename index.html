@@ -3,213 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLAUST WORKSTATION V2</title>
+    <title>FLAUST PRO PIANO ENGINE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&display=swap');
-        body { background: #020617; color: #94a3b8; font-family: 'JetBrains Mono', monospace; height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap');
+        body { background: #020617; color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
         
-        #visualizer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        /* Header & Info */
+        .studio-header { background: #0f172a; border-bottom: 2px solid #1e293b; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .kb-hint { font-size: 11px; color: #64748b; font-weight: bold; }
 
-        .header { background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid #1e293b; padding: 20px; z-index: 10; }
-        
-        .piano-viewport { flex: 1; overflow-x: auto; display: flex; align-items: flex-end; padding-bottom: 50px; scrollbar-width: thin; scrollbar-color: #334155 #020617; }
-        
-        .piano-container { display: flex; position: relative; margin: 0 auto; height: 300px; padding: 0 20px; }
+        /* Piano Area */
+        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 20px; scroll-behavior: smooth; }
+        .piano-body { display: flex; position: relative; height: 320px; margin: 0 auto; background: #000; padding: 5px; border-radius: 8px; border-top: 15px solid #1e293b; box-shadow: 0 30px 60px rgba(0,0,0,0.8); }
 
-        .key { cursor: pointer; user-select: none; position: relative; transition: all 0.05s; }
+        /* Key Styles */
+        .key { cursor: pointer; user-select: none; position: relative; transition: transform 0.05s, background 0.1s; }
         
-        .white-key { width: 45px; height: 280px; background: linear-gradient(to bottom, #f8fafc 0%, #cbd5e1 100%); border: 1px solid #94a3b8; border-radius: 0 0 5px 5px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; color: #64748b; font-size: 10px; font-weight: bold; }
-        .white-key.active { background: #fbbf24; transform: translateY(5px); box-shadow: 0 10px 20px rgba(251, 191, 36, 0.5); }
+        .white-key { width: 55px; height: 300px; background: linear-gradient(to bottom, #fff 0%, #e2e8f0 100%); border: 1px solid #94a3b8; border-radius: 0 0 6px 6px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; }
+        .white-key:active, .white-key.active { background: #cbd5e1; transform: translateY(4px); box-shadow: inset 0 5px 10px rgba(0,0,0,0.2); }
+        .white-key span { color: #94a3b8; font-size: 12px; font-weight: 800; pointer-events: none; }
 
-        .black-key { width: 28px; height: 170px; background: #1e293b; border: 1px solid #000; border-radius: 0 0 3px 3px; z-index: 2; margin-left: -14px; margin-right: -14px; }
-        .black-key.active { background: #f59e0b; transform: translateY(3px); }
+        .black-key { width: 34px; height: 180px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 4px 4px; z-index: 2; margin-left: -17px; margin-right: -17px; border: 1px solid #000; }
+        .black-key:active, .black-key.active { background: #475569; transform: translateY(2px); }
 
-        .control-panel { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
-        select, input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; outline: none; }
-        
-        .metronome-dot { width: 12px; height: 12px; background: #1e293b; border-radius: 50%; transition: background 0.1s; }
-        .metronome-dot.active { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        /* Key Mapping Label */
+        .key-map { position: absolute; bottom: 40px; font-size: 10px; color: #f59e0b; font-weight: 900; }
+
+        /* Controls */
+        .bottom-bar { background: #0f172a; padding: 15px; border-top: 1px solid #1e293b; display: flex; gap: 20px; justify-content: center; align-items: center; }
+        .pedal-btn { background: #1e293b; padding: 8px 15px; border-radius: 5px; font-size: 12px; font-weight: bold; border: 1px solid #334155; }
+        .pedal-btn.on { background: #f59e0b; color: #000; box-shadow: 0 0 15px rgba(245,158,11,0.5); }
     </style>
 </head>
 <body>
 
-<canvas id="visualizer"></canvas>
-
-<div class="header">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-black text-white italic">FLAUST <span class="text-yellow-500">WS-88</span></h1>
-            <p class="text-[10px] tracking-widest text-slate-500 uppercase">Pro Audio Workstation // 88 Keys Standard</p>
-        </div>
-        <div class="flex items-center gap-4">
-            <div class="metronome-dot" id="metro-dot"></div>
-            <div class="control-group">
-                <label>BPM</label>
-                <input type="number" id="bpm-input" value="120" min="40" max="250" class="w-20">
-            </div>
-            <button id="metro-toggle" class="bg-slate-800 px-4 py-2 rounded text-[10px] font-bold hover:bg-slate-700">START METRO</button>
-        </div>
+<div class="studio-header">
+    <div>
+        <h1 class="text-xl font-black italic tracking-tighter text-white">FLAUST <span class="text-yellow-500">PRO-88</span></h1>
+        <p class="kb-hint uppercase tracking-widest">Acoustic Mode // High-Fidelity Synthesis</p>
     </div>
-
-    <div class="control-panel">
-        <div class="control-group">
-            <label>Sound Engine</label>
-            <select id="osc-type">
-                <option value="sine">Grand Piano (Sine)</option>
-                <option value="square">Vintage Synth (Square)</option>
-                <option value="sawtooth">Power Strings (Saw)</option>
-                <option value="triangle">Electric Piano (Tri)</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>Master Volume</label>
-            <input type="range" id="master-vol" min="0" max="1" step="0.1" value="0.5">
-        </div>
-        <div class="control-group">
-            <label>Octave Shift</label>
-            <div class="flex gap-2">
-                <button onclick="changeOctave(-1)" class="bg-slate-800 px-3 py-1 rounded text-white">-</button>
-                <span id="octave-display" class="text-yellow-500 font-bold">0</span>
-                <button onclick="changeOctave(1)" class="bg-slate-800 px-3 py-1 rounded text-white">+</button>
-            </div>
-        </div>
+    <div class="text-right">
+        <div class="kb-hint">KEYBOARD MAPPING: <span class="text-white">A-K (White) | W-U (Black)</span></div>
+        <div class="kb-hint">SUSTAIN: <span class="text-white">HOLD SPACEBAR</span></div>
     </div>
 </div>
 
-<div class="piano-viewport">
-    <div class="piano-container" id="piano"></div>
+<div class="piano-outer">
+    <div class="piano-body" id="piano"></div>
+</div>
+
+<div class="bottom-bar">
+    <div class="flex items-center gap-3">
+        <label class="kb-hint">OCTAVE</label>
+        <button onclick="shiftOctave(-1)" class="bg-slate-800 px-3 py-1 rounded">-</button>
+        <span id="oct-val" class="text-yellow-500 font-bold">0</span>
+        <button onclick="shiftOctave(1)" class="bg-slate-800 px-3 py-1 rounded">+</button>
+    </div>
+    <button id="pedal" class="pedal-btn">SUSTAIN PEDAL (SPACE)</button>
 </div>
 
 <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioCtx.createAnalyser();
-    const masterGain = audioCtx.createGain();
-    masterGain.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    analyser.fftSize = 512;
+    
+    // SOUND ENGINE: Reverb & Filter
+    const mainGain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 8000; // Ngurangin suara cempreng
+    mainGain.connect(filter);
+    filter.connect(audioCtx.destination);
 
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const activeOscs = {};
-    let currentOctaveShift = 0;
-    let isMetroOn = false;
-    let metroInterval;
+    const keyMap = { 'A':'C4', 'W':'C#4', 'S':'D4', 'E':'D#4', 'D':'E4', 'F':'F4', 'T':'F#4', 'G':'G4', 'Y':'G#4', 'H':'A4', 'U':'A#4', 'J':'B4', 'K':'C5' };
+    
+    let activeNodes = {};
+    let octaveShift = 0;
+    let sustain = false;
 
-    // Generate 88 Keys (from A0 to C8)
+    // Generate 88 Keys
     const piano = document.getElementById('piano');
-    function buildPiano() {
-        piano.innerHTML = '';
-        for (let i = 0; i < 88; i++) {
-            const noteIndex = (i + 9) % 12;
-            const octave = Math.floor((i + 9) / 12);
-            const noteName = notes[noteIndex];
-            const isBlack = noteName.includes('#');
-            
-            const key = document.createElement('div');
-            key.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
-            key.dataset.note = noteName + octave;
-            
-            if (!isBlack) key.innerHTML = `<span>${noteName}${octave}</span>`;
-            
-            key.onmousedown = () => play(key.dataset.note);
-            key.onmouseup = () => stop(key.dataset.note);
-            key.onmouseleave = () => stop(key.dataset.note);
-            
-            piano.appendChild(key);
-        }
-    }
+    for (let i = 0; i < 88; i++) {
+        const nIdx = (i + 9) % 12;
+        const oct = Math.floor((i + 9) / 12);
+        const name = notes[nIdx];
+        const isBlack = name.includes('#');
+        const fullName = name + oct;
 
-    function getFreq(note) {
-        const name = note.slice(0, -1);
-        const oct = parseInt(note.slice(-1)) + currentOctaveShift;
-        const index = notes.indexOf(name);
-        return 440 * Math.pow(2, (index - 9 + (oct - 4) * 12) / 12);
+        const div = document.createElement('div');
+        div.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
+        div.dataset.note = fullName;
+
+        // Add keyboard labels for middle octave
+        for (let char in keyMap) {
+            if (keyMap[char] === fullName) {
+                div.innerHTML = `<div class="key-map">${char}</div>`;
+            }
+        }
+        
+        if (!isBlack) div.innerHTML += `<span>${name}${oct}</span>`;
+
+        div.onmousedown = () => play(fullName);
+        div.onmouseup = () => stop(fullName);
+        div.onmouseleave = () => stop(fullName);
+        piano.appendChild(div);
     }
 
     function play(note) {
-        if (activeOscs[note]) return;
+        if (activeNodes[note]) return;
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
+        // High Quality Synthesis
         const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        osc.type = document.getElementById('osc-type').value;
-        osc.frequency.setValueAtTime(getFreq(note), audioCtx.currentTime);
+        const osc2 = audioCtx.createOscillator(); // Sub-harmonics
+        const g = audioCtx.createGain();
 
-        const vol = document.getElementById('master-vol').value;
-        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+        const freq = getFrequency(note);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc2.frequency.setValueAtTime(freq / 2, audioCtx.currentTime); // Deepness
 
-        osc.connect(gain);
-        gain.connect(masterGain);
+        osc.type = 'triangle';
+        osc2.type = 'sine';
+
+        g.gain.setValueAtTime(0, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02); // Attack halus
+
+        osc.connect(g);
+        osc2.connect(g);
+        g.connect(mainGain);
+
         osc.start();
-
-        activeOscs[note] = { osc, gain };
+        osc2.start();
+        activeNodes[note] = { osc, osc2, g };
+        
         const el = document.querySelector(`[data-note="${note}"]`);
-        if(el) el.classList.add('active');
+        if (el) el.classList.add('active');
     }
 
     function stop(note) {
-        if (activeOscs[note]) {
-            const { osc, gain } = activeOscs[note];
-            gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-            setTimeout(() => { osc.stop(); delete activeOscs[note]; }, 100);
-            const el = document.querySelector(`[data-note="${note}"]`);
-            if(el) el.classList.remove('active');
-        }
+        if (!activeNodes[note] || sustain) return;
+        
+        const { osc, osc2, g } = activeNodes[note];
+        const release = 0.5; // Release lembut ala piano asli
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + release);
+        
+        setTimeout(() => {
+            osc.stop();
+            osc2.stop();
+            delete activeNodes[note];
+        }, release * 1000);
+
+        const el = document.querySelector(`[data-note="${note}"]`);
+        if (el) el.classList.remove('active');
     }
 
-    function changeOctave(val) {
-        currentOctaveShift = Math.max(-2, Math.min(2, currentOctaveShift + val));
-        document.getElementById('octave-display').innerText = currentOctaveShift;
+    function getFrequency(note) {
+        const name = note.slice(0, -1);
+        let oct = parseInt(note.slice(-1)) + octaveShift;
+        const idx = notes.indexOf(name);
+        return 440 * Math.pow(2, (idx - 9 + (oct - 4) * 12) / 12);
     }
 
-    // Metronome
-    document.getElementById('metro-toggle').onclick = () => {
-        isMetroOn = !isMetroOn;
-        const btn = document.getElementById('metro-toggle');
-        const dot = document.getElementById('metro-dot');
-        if (isMetroOn) {
-            btn.innerText = "STOP METRO";
-            const bpm = document.getElementById('bpm-input').value;
-            const ms = 60000 / bpm;
-            metroInterval = setInterval(() => {
-                dot.classList.add('active');
-                setTimeout(() => dot.classList.remove('active'), 100);
-                // Beep sound
-                const osc = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                osc.frequency.value = 880;
-                g.gain.value = 0.1;
-                osc.connect(g); g.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-            }, ms);
-        } else {
-            btn.innerText = "START METRO";
-            clearInterval(metroInterval);
-        }
-    };
+    // Keyboard Handler
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (e.code === 'Space') { sustain = true; document.getElementById('pedal').classList.add('on'); return; }
+        
+        const note = keyMap[e.key.toUpperCase()];
+        if (note) play(note);
+    });
 
-    // Visualizer
-    const canvas = document.getElementById('visualizer');
-    const ctx = canvas.getContext('2d');
-    function draw() {
-        requestAnimationFrame(draw);
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
-        for (let i = 0; i < dataArray.length; i++) {
-            const h = (dataArray[i] / 255) * canvas.height;
-            ctx.fillRect(i * (canvas.width / dataArray.length), canvas.height - h, 2, h);
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') { 
+            sustain = false; 
+            document.getElementById('pedal').classList.remove('on');
+            // Matikan semua nada yang nyangkut
+            Object.keys(activeNodes).forEach(stop);
+            return; 
         }
+        const note = keyMap[e.key.toUpperCase()];
+        if (note) stop(note);
+    });
+
+    function shiftOctave(v) {
+        octaveShift = Math.max(-2, Math.min(2, octaveShift + v));
+        document.getElementById('oct-val').innerText = octaveShift;
     }
-
-    buildPiano();
-    draw();
 </script>
 </body>
 </html>
