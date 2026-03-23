@@ -2,221 +2,205 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>NEON RAIDER: CYBER-SURGE</title>
+    <title>CYBER SURGE: GOD MODE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        body { margin: 0; overflow: hidden; background: #020617; font-family: 'Orbitron', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        canvas { background: #000; border: 2px solid #06b6d4; box-shadow: 0 0 30px #06b6d444; cursor: none; }
-        .ui { position: absolute; pointer-events: none; color: #fff; width: 800px; height: 500px; }
-        .bar { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; border: 1px solid #334155; }
-        .glow-text { text-shadow: 0 0 10px #06b6d4; }
-        #level-up { display: none; background: rgba(0,0,0,0.9); position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; pointer-events: all; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { filter: drop-shadow(0 0 10px #06b6d4); cursor: crosshair; }
+        .ui-overlay { position: absolute; inset: 0; pointer-events: none; padding: 20px; color: #fff; }
+        .upgrade-card { background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; padding: 10px; border-radius: 4px; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div class="ui p-6 flex flex-col justify-between">
-        <div class="flex justify-between items-start">
-            <div class="w-48">
-                <p class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-1">Integrity</p>
-                <div class="bar"><div id="hp-fill" class="h-full bg-cyan-500 w-full shadow-[0_0_10px_#06b6d4]"></div></div>
-                <p class="text-[10px] text-fuchsia-400 font-bold uppercase tracking-widest mt-3 mb-1">Energy Core</p>
-                <div class="bar"><div id="energy-fill" class="h-full bg-fuchsia-500 w-full shadow-[0_0_10px_#d946ef]"></div></div>
+    <div class="ui-overlay flex flex-col justify-between">
+        <div class="flex justify-between">
+            <div class="w-64">
+                <div class="text-[10px] text-cyan-400 mb-1">SYSTEM INTEGRITY</div>
+                <div class="h-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="hp-bar" class="h-full bg-cyan-500 w-full transition-all"></div>
+                </div>
+                <div id="upgrade-menu" class="mt-4 space-y-2 pointer-events-auto hidden">
+                    <p class="text-[9px] text-yellow-400 animate-pulse">UPGRADE READY! [Press 1-3]</p>
+                    <div class="upgrade-card text-[10px]" id="up-1">1. OVERDRIVE (+DMG)</div>
+                    <div class="upgrade-card text-[10px]" id="up-2">2. REACTION (+SPEED)</div>
+                    <div class="upgrade-card text-[10px]" id="up-3">3. REPAIR (RESTORE HP)</div>
+                </div>
             </div>
             <div class="text-right">
-                <h1 class="text-2xl font-black italic glow-text">CYBER-SURGE</h1>
-                <p id="score-val" class="text-cyan-400 text-sm">DATA: 000000</p>
+                <p id="score-text" class="text-2xl font-black text-cyan-400 italic">000000</p>
+                <p id="level-text" class="text-[10px] text-fuchsia-500">LEVEL 1</p>
             </div>
         </div>
-        
-        <div id="level-up" class="z-50 border-2 border-cyan-500 rounded-lg m-20">
-            <h2 class="text-2xl font-black mb-6 text-cyan-400">UPGRADE DETECTED</h2>
-            <div class="flex gap-4">
-                <button onclick="applyUpgrade('speed')" class="bg-cyan-900/50 border border-cyan-500 p-4 hover:bg-cyan-500 hover:text-black transition">ACCELERATION</button>
-                <button onclick="applyUpgrade('damage')" class="bg-fuchsia-900/50 border border-fuchsia-500 p-4 hover:bg-fuchsia-500 hover:text-black transition">OVERLOAD</button>
-                <button onclick="applyUpgrade('shield')" class="bg-blue-900/50 border border-blue-500 p-4 hover:bg-blue-500 hover:text-black transition">REINFORCE</button>
-            </div>
-        </div>
+        <div id="boss-warning" class="hidden text-center text-red-500 animate-ping font-black text-4xl">BOSS INCOMING</div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <canvas id="gameCanvas" width="900" height="500"></canvas>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // GAME STATE
-    let state = {
-        score: 0, level: 1, xp: 0, 
-        hp: 100, energy: 100, 
-        active: true, time: 0,
-        shake: 0, slow: 1
+    // CONFIG & STATE
+    let score = 0, level = 1, xp = 0, hp = 100, active = true, shake = 0, time = 0;
+    let upAvailable = false, bossActive = false;
+    const keys = {};
+
+    const player = { x: 100, y: 250, w: 30, h: 20, spd: 5, dmg: 1 };
+    let bullets = [], enemies = [], particles = [], boss = null;
+
+    // INPUT
+    window.onkeydown = (e) => {
+        keys[e.code] = true;
+        if(upAvailable) {
+            if(e.key === '1') applyUp('dmg');
+            if(e.key === '2') applyUp('spd');
+            if(e.key === '3') applyUp('hp');
+        }
     };
+    window.onkeyup = (e) => keys[e.code] = false;
 
-    const player = {
-        x: 100, y: 250, r: 15, 
-        speed: 5, fireRate: 15, timer: 0,
-        stats: { dmg: 1, spd: 5, shield: 0 }
-    };
+    function applyUp(type) {
+        if(type === 'dmg') player.dmg += 0.5;
+        if(type === 'spd') player.spd += 1;
+        if(type === 'hp') hp = Math.min(100, hp + 40);
+        upAvailable = false;
+        document.getElementById('upgrade-menu').classList.add('hidden');
+    }
 
-    let bullets = [], enemies = [], particles = [], beams = [];
+    function spawnBoss() {
+        bossActive = true;
+        document.getElementById('boss-warning').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('boss-warning').classList.add('hidden');
+            boss = { x: 1000, y: 100, w: 100, h: 300, hp: 1000 + (level*200), maxHp: 1000 + (level*200), lastShot: 0 };
+        }, 2000);
+    }
 
-    // CORE LOGIC
-    function createParticle(x, y, color) {
-        for(let i=0; i<8; i++) {
-            particles.push({
-                x, y, color,
-                vx: (Math.random()-0.5)*10,
-                vy: (Math.random()-0.5)*10,
-                life: 1, decay: 0.02 + Math.random()*0.02
-            });
+    function createExplosion(x, y, color) {
+        for(let i=0; i<15; i++) {
+            particles.push({ x, y, vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, life: 1, c: color });
         }
     }
 
-    function shoot() {
-        if(state.energy > 5) {
-            bullets.push({ x: player.x+20, y: player.y, vx: 15, vy: 0, dmg: player.stats.dmg });
-            state.energy -= 2;
-            state.shake = 3;
+    function update() {
+        if(!active) return;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(0,0,900,500);
+
+        // Grid Movement
+        ctx.strokeStyle = '#06b6d411';
+        for(let i=0; i<900; i+=50) {
+            ctx.beginPath(); ctx.moveTo(i - (time%50), 0); ctx.lineTo(i - (time%50), 500); ctx.stroke();
         }
-    }
-
-    function spawnEnemy() {
-        const type = Math.random() > 0.8 ? 'HEAVY' : 'SCOUT';
-        enemies.push({
-            x: 850, y: Math.random() * 450 + 25,
-            hp: type === 'HEAVY' ? 5 : 2,
-            type, speed: type === 'SCOUT' ? 3 + (state.level * 0.2) : 1.5,
-            lastShot: 0
-        });
-    }
-
-    function applyUpgrade(type) {
-        if(type === 'speed') player.stats.spd += 1.5;
-        if(type === 'damage') player.stats.dmg += 0.5;
-        if(type === 'shield') player.stats.shield += 10;
-        document.getElementById('level-up').style.display = 'none';
-        state.slow = 1;
-        state.active = true;
-    }
-
-    // MAIN LOOP
-    function draw() {
-        if(!state.active) return requestAnimationFrame(draw);
-        
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        ctx.fillRect(0,0,800,500);
 
         // Screen Shake
-        if(state.shake > 0) {
-            ctx.translate(Math.random()*state.shake, Math.random()*state.shake);
-            state.shake *= 0.9;
-        }
+        if(shake > 0) { ctx.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake *= 0.9; }
 
-        // Grid Background Effect
-        ctx.strokeStyle = '#06b6d411';
-        ctx.lineWidth = 1;
-        for(let i=0; i<800; i+=40) {
-            ctx.beginPath(); ctx.moveTo(i - (state.time%40), 0); ctx.lineTo(i - (state.time%40), 500); ctx.stroke();
-        }
-
-        // Player (Neon Triangle)
+        // Player Draw
         ctx.shadowBlur = 15; ctx.shadowColor = '#06b6d4';
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.moveTo(player.x + 20, player.y);
-        ctx.lineTo(player.x - 10, player.y - 15);
-        ctx.lineTo(player.x - 10, player.y + 15);
-        ctx.fill();
+        ctx.moveTo(player.x+25, player.y); ctx.lineTo(player.x-10, player.y-15); ctx.lineTo(player.x-10, player.y+15); ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Input Handle
-        if(window.keys['KeyW'] && player.y > 20) player.y -= player.stats.spd;
-        if(window.keys['KeyS'] && player.y < 480) player.y += player.stats.spd;
-        if(window.keys['KeyA'] && player.x > 20) player.x -= player.stats.spd;
-        if(window.keys['KeyD'] && player.x < 400) player.x += player.stats.spd;
+        // Player Move
+        if(keys['KeyW']) player.y -= player.spd;
+        if(keys['KeyS']) player.y += player.spd;
+        if(keys['KeyA']) player.x -= player.spd;
+        if(keys['KeyD']) player.x += player.spd;
 
-        // Particles
-        particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= p.decay;
-            ctx.fillStyle = p.color + Math.floor(p.life*255).toString(16);
-            ctx.fillRect(p.x, p.y, 3, 3);
-            if(p.life <= 0) particles.splice(i, 1);
-        });
+        // Shooting
+        if(time % 10 === 0) bullets.push({ x: player.x+20, y: player.y, vx: 18, type: 'P' });
 
         // Bullets
         bullets.forEach((b, i) => {
             b.x += b.vx;
-            ctx.fillStyle = '#06b6d4';
-            ctx.fillRect(b.x, b.y-2, 15, 4);
-            if(b.x > 800) bullets.splice(i, 1);
+            ctx.fillStyle = b.type === 'P' ? '#06b6d4' : '#f43f5e';
+            ctx.fillRect(b.x, b.y-2, 20, 4);
+            if(b.x > 900 || b.x < -50) bullets.splice(i, 1);
         });
 
-        // Enemies
-        enemies.forEach((e, i) => {
-            e.x -= e.speed;
-            ctx.fillStyle = e.type === 'HEAVY' ? '#d946ef' : '#f43f5e';
-            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-            ctx.fillRect(e.x, e.y-15, 30, 30);
+        // Boss Logic
+        if(boss) {
+            if(boss.x > 750) boss.x -= 2;
+            ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 4;
+            ctx.strokeRect(boss.x, boss.y, boss.w, boss.h);
+            ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
             
-            // Collision Player
-            if(Math.hypot(e.x - player.x, e.y - player.y) < 30) {
-                state.hp -= 20; e.hp = 0; state.shake = 10;
-            }
+            // Boss Shoot
+            if(time % 40 === 0) bullets.push({ x: boss.x, y: boss.y + Math.random()*boss.h, vx: -10, type: 'E' });
 
-            // Bullet Collision
             bullets.forEach((b, bi) => {
-                if(b.x > e.x && b.x < e.x+30 && b.y > e.y-15 && b.y < e.y+15) {
-                    e.hp -= b.dmg;
-                    bullets.splice(bi, 1);
-                    createParticle(e.x, e.y, '#06b6d4');
+                if(b.type === 'P' && b.x > boss.x && b.y > boss.y && b.y < boss.y+boss.h) {
+                    boss.hp -= player.dmg * 5; bullets.splice(bi, 1);
+                    if(boss.hp <= 0) { 
+                        createExplosion(boss.x+50, boss.y+150, '#f43f5e');
+                        boss = null; bossActive = false; score += 2000; shake = 40;
+                    }
+                }
+            });
+        }
+
+        // Enemies
+        if(!bossActive && time % 40 === 0) {
+            enemies.push({ x: 950, y: Math.random()*450+25, hp: 2 + level, spd: 3 + Math.random()*3 });
+        }
+
+        enemies.forEach((e, i) => {
+            e.x -= e.spd;
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+20, e.y-15); ctx.lineTo(e.x+40, e.y); ctx.lineTo(e.x+20, e.y+15); ctx.fill();
+
+            bullets.forEach((b, bi) => {
+                if(b.type === 'P' && Math.hypot(b.x-e.x, b.y-e.y) < 25) {
+                    e.hp -= player.dmg; bullets.splice(bi, 1);
+                    if(e.hp <= 0) {
+                        createExplosion(e.x, e.y, '#f43f5e');
+                        enemies.splice(i, 1); score += 100; xp += 20;
+                    }
                 }
             });
 
-            if(e.hp <= 0) {
-                enemies.splice(i, 1);
-                state.score += 100;
-                state.xp += 20;
-                state.energy = Math.min(100, state.energy + 10);
-                createParticle(e.x, e.y, '#f43f5e');
-                if(state.xp >= 100) {
-                    state.level++; state.xp = 0;
-                    document.getElementById('level-up').style.display = 'flex';
-                    state.active = false;
-                }
-            }
+            if(Math.hypot(e.x-player.x, e.y-player.y) < 30) { hp -= 10; enemies.splice(i, 1); shake = 10; }
         });
 
-        // UI Update
-        document.getElementById('hp-fill').style.width = state.hp + "%";
-        document.getElementById('energy-fill').style.width = state.energy + "%";
-        document.getElementById('score-val').innerText = "DATA: " + state.score.toString().padStart(6, '0');
-
-        if(state.hp <= 0) {
-            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0,0,800,500);
-            ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 40px Orbitron";
-            ctx.fillText("SYSTEM FAILURE", 400, 250);
-            return;
+        // XP & Level Up
+        if(xp >= 100) {
+            level++; xp = 0; upAvailable = true;
+            document.getElementById('upgrade-menu').classList.remove('hidden');
+            if(score > 0 && score % 2000 === 0) spawnBoss();
         }
 
-        state.time++;
-        if(state.time % Math.max(20, 60 - state.level*2) === 0) spawnEnemy();
-        state.energy = Math.min(100, state.energy + 0.1);
+        // Particles
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+            ctx.fillStyle = p.c + Math.floor(p.life*255).toString(16);
+            ctx.fillRect(p.x, p.y, 4, 4);
+            if(p.life <= 0) particles.splice(i, 1);
+        });
 
+        // UI
+        document.getElementById('hp-bar').style.width = hp + "%";
+        document.getElementById('score-text').innerText = score.toString().padStart(6, '0');
+        document.getElementById('level-text').innerText = "LEVEL " + level;
+
+        if(hp <= 0) {
+            active = false;
+            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0,0,900,500);
+            ctx.fillStyle = "#f43f5e"; ctx.textAlign = "center"; ctx.font = "bold 50px Orbitron";
+            ctx.fillText("FATAL ERROR", 450, 250);
+        }
+
+        time++;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        requestAnimationFrame(draw);
+        requestAnimationFrame(update);
     }
 
-    // CONTROLS
-    window.keys = {};
-    window.onkeydown = (e) => { 
-        window.keys[e.code] = true;
-        if(e.code === 'Space' || e.code === 'KeyF') shoot();
-    };
-    window.onkeyup = (e) => window.keys[e.code] = false;
-
-    draw();
+    update();
 </script>
 </body>
 </html>
