@@ -3,55 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLAUST GRAND PIANO v3</title>
+    <title>FLAUST FULL-MAP PIANO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap');
         body { background: #020617; color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Loading Screen */
         #loader { position: fixed; inset: 0; background: #020617; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
 
-        .studio-header { background: #0f172a; border-bottom: 2px solid #1e293b; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .studio-header { background: #0f172a; border-bottom: 2px solid #1e293b; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         
-        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 20px; }
-        .piano-body { display: flex; position: relative; height: 320px; margin: 0 auto; background: #000; padding: 5px; border-radius: 8px; border-top: 20px solid #1e293b; box-shadow: 0 40px 80px rgba(0,0,0,0.9); }
+        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 20px; scrollbar-width: none; }
+        .piano-body { display: flex; position: relative; height: 300px; margin: 0 auto; background: #000; padding: 5px; border-radius: 8px; border-top: 15px solid #1e293b; box-shadow: 0 40px 80px rgba(0,0,0,0.9); }
 
-        /* Key Styles */
-        .key { cursor: pointer; user-select: none; position: relative; transition: transform 0.05s, background 0.1s; }
-        .white-key { width: 55px; height: 300px; background: linear-gradient(to bottom, #fff 0%, #e2e8f0 100%); border: 1px solid #94a3b8; border-radius: 0 0 6px 6px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; }
-        .white-key.active { background: #fde047 !important; transform: translateY(5px); box-shadow: inset 0 5px 10px rgba(0,0,0,0.2); }
-        .white-key span { color: #94a3b8; font-size: 11px; font-weight: 800; pointer-events: none; }
+        .key { cursor: pointer; user-select: none; position: relative; transition: transform 0.05s; }
+        .white-key { width: 45px; height: 280px; background: linear-gradient(to bottom, #fff 0%, #e2e8f0 100%); border: 1px solid #94a3b8; border-radius: 0 0 6px 6px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; }
+        .white-key.active { background: #fbbf24 !important; transform: translateY(5px); }
+        .white-key span { color: #94a3b8; font-size: 9px; font-weight: 800; }
 
-        .black-key { width: 34px; height: 185px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 4px 4px; z-index: 2; margin-left: -17px; margin-right: -17px; border: 1px solid #000; }
-        .black-key.active { background: #eab308 !important; transform: translateY(3px); }
+        .black-key { width: 28px; height: 170px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 4px 4px; z-index: 2; margin-left: -14px; margin-right: -14px; border: 1px solid #000; }
+        .black-key.active { background: #f59e0b !important; transform: translateY(3px); }
 
-        .key-map { position: absolute; bottom: 40px; font-size: 11px; color: #f59e0b; font-weight: 900; }
+        .key-map-label { position: absolute; bottom: 30px; font-size: 10px; color: #f59e0b; font-weight: 900; z-index: 10; pointer-events: none; }
 
-        /* Sustain Button */
-        .control-btn { background: #1e293b; padding: 12px 25px; border-radius: 8px; font-size: 13px; font-weight: 800; border: 2px solid #334155; transition: all 0.3s; color: #64748b; }
-        .control-btn.active { background: #f59e0b; color: #000; border-color: #fbbf24; box-shadow: 0 0 20px rgba(245,158,11,0.4); }
+        .control-btn { background: #1e293b; padding: 8px 20px; border-radius: 6px; font-size: 12px; font-weight: 800; border: 2px solid #334155; transition: all 0.3s; }
+        .control-btn.active { background: #f59e0b; color: #000; border-color: #fbbf24; box-shadow: 0 0 15px rgba(245,158,11,0.4); }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <div class="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-    <p class="text-sm font-bold tracking-widest text-slate-400">LOADING SAMPLES...</p>
+    <div class="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+    <p class="text-[10px] font-bold tracking-widest text-slate-500">INITIATING GRAND PIANO SAMPLES...</p>
 </div>
 
 <div class="studio-header">
     <div>
-        <h1 class="text-2xl font-black italic tracking-tighter text-white">FLAUST <span class="text-yellow-500 underline">STUDIO</span></h1>
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Acoustic Grand Piano Engine</p>
+        <h1 class="text-xl font-black italic text-white">FLAUST <span class="text-yellow-500">MASTER-88</span></h1>
+        <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Full Keyboard Integrated Workstation</p>
     </div>
-    <div class="flex gap-6 items-center">
-        <button id="sustain-btn" class="control-btn" onclick="toggleSustain()">SUSTAIN OFF</button>
-        <div class="text-right">
-            <p class="text-[10px] text-slate-500 font-bold uppercase">Mapping</p>
-            <p class="text-xs text-white font-bold">A-K & W-U</p>
-        </div>
+    <div class="flex gap-4">
+        <button id="sustain-btn" class="control-btn" onclick="toggleSustain()">SUSTAIN OFF (SPACE)</button>
     </div>
 </div>
 
@@ -60,18 +53,18 @@
 </div>
 
 <script>
-    // Inisialisasi Sampler dengan suara Piano asli
+    // FULL KEYBOARD MAPPING (1-M)
+    const keyMap = {
+        // Baris Bawah (Bass)
+        'Z': 'C3', 'S': 'C#3', 'X': 'D3', 'D': 'D#3', 'C': 'E3', 'V': 'F3', 'G': 'F#3', 'B': 'G3', 'H': 'G#3', 'N': 'A3', 'J': 'A#3', 'M': 'B3',
+        // Baris Tengah (Mid)
+        'Q': 'C4', '2': 'C#4', 'W': 'D4', '3': 'D#4', 'E': 'E4', 'R': 'F4', '5': 'F#4', 'T': 'G4', '6': 'G#4', 'Y': 'A4', '7': 'A#4', 'U': 'B4',
+        // Baris Atas (High)
+        'I': 'C5', '9': 'C#5', 'O': 'D5', '0': 'D#5', 'P': 'E5', '[': 'F5', '=': 'F#5', ']': 'G5'
+    };
+
     const sampler = new Tone.Sampler({
-        urls: {
-            "A0": "A0.mp3", "C1": "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
-            "A1": "A1.mp3", "C2": "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
-            "A2": "A2.mp3", "C3": "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
-            "A3": "A3.mp3", "C4": "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
-            "A4": "A4.mp3", "C5": "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
-            "A5": "A5.mp3", "C6": "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
-            "A6": "A6.mp3", "C7": "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
-            "A7": "A7.mp3", "C8": "C8.mp3"
-        },
+        urls: { "A0": "A0.mp3", "C1": "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3", "A1": "A1.mp3", "C2": "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3", "A2": "A2.mp3", "C3": "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3", "A3": "A3.mp3", "C4": "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3", "A4": "A4.mp3", "C5": "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3", "A5": "A5.mp3", "C6": "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3", "A6": "A6.mp3", "C7": "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3", "A7": "A7.mp3", "C8": "C8.mp3" },
         release: 1,
         baseUrl: "https://tonejs.github.io/audio/salamander/",
         onload: () => {
@@ -81,78 +74,79 @@
     }).toDestination();
 
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const keyMap = { 'A':'C4', 'W':'C#4', 'S':'D4', 'E':'D#4', 'D':'E4', 'F':'F4', 'T':'F#4', 'G':'G4', 'Y':'G#4', 'H':'A4', 'U':'A#4', 'J':'B4', 'K':'C5' };
     let sustainActive = false;
-    let activeNotes = new Set();
+    let pressedKeys = new Set();
 
-    // Create 88 Keys
     const piano = document.getElementById('piano');
     for (let i = 0; i < 88; i++) {
         const nIdx = (i + 9) % 12;
         const oct = Math.floor((i + 9) / 12);
-        const name = notes[nIdx];
-        const isBlack = name.includes('#');
-        const fullName = name + oct;
+        const fullName = notes[nIdx] + oct;
+        const isBlack = notes[nIdx].includes('#');
 
         const div = document.createElement('div');
         div.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
         div.id = `note-${fullName}`;
         
+        // Tampilkan label mapping keyboard
         for (let char in keyMap) {
-            if (keyMap[char] === fullName) div.innerHTML = `<div class="key-map">${char}</div>`;
+            if (keyMap[char] === fullName) {
+                const label = document.createElement('div');
+                label.className = 'key-map-label';
+                label.innerText = char;
+                div.appendChild(label);
+            }
         }
-        
-        if (!isBlack) div.innerHTML += `<span>${name}${oct}</span>`;
 
-        // Mouse Events
-        div.addEventListener('mousedown', () => playNote(fullName));
-        div.addEventListener('mouseup', () => stopNote(fullName));
-        div.addEventListener('mouseleave', () => stopNote(fullName));
-        
+        div.onmousedown = () => playNote(fullName);
+        div.onmouseup = () => stopNote(fullName);
         piano.appendChild(div);
     }
 
     function playNote(note) {
         if (Tone.context.state !== 'running') Tone.start();
         sampler.triggerAttack(note);
-        document.getElementById(`note-${note}`).classList.add('active');
-        activeNotes.add(note);
+        const el = document.getElementById(`note-${note}`);
+        if(el) el.classList.add('active');
     }
 
     function stopNote(note) {
         if (!sustainActive) {
             sampler.triggerRelease(note);
-            document.getElementById(`note-${note}`).classList.remove('active');
+            const el = document.getElementById(`note-${note}`);
+            if(el) el.classList.remove('active');
         }
-        activeNotes.delete(note);
     }
 
     function toggleSustain() {
         sustainActive = !sustainActive;
         const btn = document.getElementById('sustain-btn');
-        btn.innerText = sustainActive ? "SUSTAIN ON" : "SUSTAIN OFF";
+        btn.innerText = sustainActive ? "SUSTAIN ON (SPACE)" : "SUSTAIN OFF (SPACE)";
         btn.classList.toggle('active');
-        
-        // Jika sustain dimatikan, lepas semua nada yang tidak sedang ditekan
         if (!sustainActive) {
             sampler.releaseAll();
             document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
         }
     }
 
-    // Keyboard Listeners
     window.addEventListener('keydown', (e) => {
-        if (e.repeat) return;
-        if (e.code === 'Space') { toggleSustain(); return; }
-        const note = keyMap[e.key.toUpperCase()];
-        if (note) playNote(note);
+        const char = e.key.toUpperCase();
+        if (e.code === 'Space') { e.preventDefault(); toggleSustain(); return; }
+        const note = keyMap[char];
+        if (note && !pressedKeys.has(char)) {
+            pressedKeys.add(char);
+            playNote(note);
+        }
     });
 
     window.addEventListener('keyup', (e) => {
-        const note = keyMap[e.key.toUpperCase()];
-        if (note) stopNote(note);
+        const char = e.key.toUpperCase();
+        const note = keyMap[char];
+        if (note) {
+            pressedKeys.delete(char);
+            stopNote(note);
+        }
     });
-
 </script>
 </body>
 </html>
