@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE MAGA SQUAD | FIX TOTAL</title>
+    <title>SNAKE MAGA | V.FINAL STABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -11,55 +11,48 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
         body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; height: 100vh; display: flex; overflow: hidden; }
-        
         #game-container { display: none; width: 100%; height: 100%; padding: 15px; gap: 15px; }
         #board-area { flex: 1; position: relative; background: #0f172a; border: 4px solid #1e293b; border-radius: 20px; overflow: hidden; }
         #board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); width: 100%; height: 100%; }
-        
         .cell { border: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; position: relative; }
         .cell span { font-size: 14px; opacity: 0.15; font-weight: 800; }
-
         .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         
-        /* VISUAL TANGGA */
+        /* VISUAL ASSETS */
         .ladder-rail { stroke: #78350f; stroke-width: 10; fill: none; stroke-linecap: round; }
         .ladder-step { stroke: #d97706; stroke-width: 4; }
-
-        /* VISUAL ULAR MAX LEVEL */
         .snake-body { stroke: #991b1b; stroke-width: 16; fill: none; stroke-linecap: round; }
         .snake-stripes { stroke: #ef4444; stroke-width: 5; fill: none; stroke-linecap: round; stroke-dasharray: 8, 12; }
         .snake-head { fill: #b91c1c; }
         .snake-tongue { stroke: #f472b6; stroke-width: 2; fill: none; }
 
-        /* PION FOTO SQUAD - FIX DISINI */
+        /* PION FIX */
         .pawn { 
-            width: 55px; height: 55px; position: absolute; z-index: 50; 
-            transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+            width: 50px; height: 50px; position: absolute; z-index: 50; 
+            transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
             border-radius: 50%; border: 3px solid #fff; 
-            background-size: cover; background-position: center; background-repeat: no-repeat;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.5); background-color: #1e293b;
+            background-size: cover; background-position: center;
+            background-color: #334155; /* Warna cadangan kalau foto ilang */
+            box-shadow: 0 8px 15px rgba(0,0,0,0.5);
         }
-        .pawn-name { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: #000; font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 900; white-space: nowrap; }
+        .pawn-name { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: #000; font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 900; white-space: nowrap; }
 
-        /* UI SIDEBAR */
+        /* SIDEBAR */
         #sidebar { width: 280px; display: flex; flex-direction: column; gap: 10px; }
         .ui-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 15px; padding: 15px; }
-
-        .dice { width: 80px; height: 80px; background: #fff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #000; font-size: 35px; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .dice { width: 80px; height: 80px; background: #fff; border-radius: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #000; font-size: 35px; font-weight: 900; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
         .rolling { animation: spin 0.1s infinite linear; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #chat-list { flex: 1; overflow-y: auto; font-size: 12px; scroll-behavior: smooth; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div id="setup" class="fixed inset-0 bg-slate-950 z-[100] flex flex-col items-center justify-center p-4">
-    <h1 class="text-5xl font-black text-yellow-500 mb-8 italic tracking-tighter">SNAKE MAGA</h1>
+    <h1 class="text-5xl font-black text-yellow-500 mb-8 italic italic">SNAKE MAGA</h1>
     <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm shadow-2xl">
         <input id="room-id" type="text" placeholder="KODE ROOM" class="w-full bg-slate-950 border border-slate-700 p-4 rounded-xl text-center text-xl font-bold mb-4 uppercase text-yellow-500 outline-none">
         <div id="hero-select" class="grid grid-cols-3 gap-2 mb-6"></div>
-        <button onclick="joinGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black text-white transition-all shadow-lg uppercase">Masuk Arena</button>
+        <button onclick="joinGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black text-white shadow-lg uppercase">GAS MABAR</button>
     </div>
 </div>
 
@@ -68,17 +61,14 @@
         <svg id="svg-layer" class="svg-layer"></svg>
         <div id="board"></div>
     </div>
-
     <div id="sidebar">
         <div class="ui-card text-center">
-            <p id="turn-info" class="text-yellow-500 font-bold text-xs mb-3 uppercase tracking-widest">CONNECTING...</p>
-            <div id="dice-btn" class="dice shadow-xl" onclick="rollDice()">1</div>
-            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase">Klik Dadu</p>
+            <p id="turn-info" class="text-yellow-500 font-bold text-xs mb-3 uppercase tracking-widest">SINKRONISASI...</p>
+            <div id="dice-btn" class="dice" onclick="rollDice()">1</div>
         </div>
-        
         <div class="ui-card flex-1 flex flex-col overflow-hidden">
-            <div id="chat-list" class="space-y-1 mb-3"></div>
-            <input id="chat-in" type="text" placeholder="Bacotan..." class="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs outline-none" onkeypress="if(event.key==='Enter') sendChat()">
+            <div id="chat-list" class="flex-1 overflow-y-auto text-xs space-y-1 mb-2"></div>
+            <input id="chat-in" type="text" placeholder="Ketik bacotan..." class="w-full bg-slate-950 p-2 rounded-lg text-xs outline-none border border-slate-800" onkeypress="if(event.key==='Enter') sendChat()">
         </div>
     </div>
 </div>
@@ -101,12 +91,12 @@
     
     let user = '', room = '', isMoving = false;
 
-    // Build Hero Selector
+    // Build Selector
     const hSelect = document.getElementById('hero-select');
     squad.forEach(s => {
         const btn = document.createElement('button');
         btn.innerText = s;
-        btn.className = "bg-slate-800 p-2 rounded-lg border-2 border-transparent text-[10px] font-bold uppercase hover:bg-slate-700 transition-colors";
+        btn.className = "bg-slate-800 p-2 rounded-lg border-2 border-transparent text-[10px] font-bold uppercase";
         btn.onclick = () => {
             document.querySelectorAll('#hero-select button').forEach(b => b.classList.remove('border-yellow-500', 'bg-slate-700'));
             btn.classList.add('border-yellow-500', 'bg-slate-700');
@@ -115,33 +105,36 @@
         hSelect.appendChild(btn);
     });
 
-    function joinGame() {
-        room = document.getElementById('room-id').value.toUpperCase() || 'SQUAD';
-        if(!user) return alert("Pilih Karakter Dulu Bre!");
+    async function joinGame() {
+        room = document.getElementById('room-id').value.toUpperCase() || 'MAGA';
+        if(!user) return alert("Pilih Karakter Dulu!");
         
-        db.ref('rooms/'+room).once('value', snap => {
-            let data = snap.val();
-            if(!data) {
-                db.ref('rooms/'+room).set({
-                    players: [{name:user, pos:1, img: `${user.toLowerCase()}.png`}],
-                    turn: 0, last: 1, moving: false
-                }).then(startUI);
+        const ref = db.ref('rooms/'+room);
+        const snap = await ref.get();
+        let data = snap.val();
+
+        if(!data) {
+            await ref.set({
+                players: [{name:user, pos:1, img: `${user.toLowerCase()}.png`}],
+                turn: 0, last: 1, moving: false
+            });
+        } else {
+            let pList = data.players || [];
+            if(!pList.find(p => p.name === user)) {
+                pList.push({name:user, pos:1, img: `${user.toLowerCase()}.png`});
+                await ref.update({players: pList, moving: false});
             } else {
-                let pList = data.players || [];
-                if(!pList.find(p => p.name === user)) {
-                    pList.push({name:user, pos:1, img: `${user.toLowerCase()}.png`});
-                    db.ref('rooms/'+room).update({players: pList, moving: false}).then(startUI);
-                } else {
-                    db.ref('rooms/'+room).update({moving: false}).then(startUI);
-                }
+                await ref.update({moving: false});
             }
-        });
+        }
+        startApp();
     }
 
-    function startUI() {
+    function startApp() {
         document.getElementById('setup').style.display = 'none';
         document.getElementById('game-container').style.display = 'flex';
-        initBoard(); listenGame();
+        initBoard(); 
+        listenGame();
     }
 
     function initBoard() {
@@ -155,13 +148,12 @@
                 b.appendChild(cell);
             }
         }
-        setTimeout(drawAssets, 600);
+        setTimeout(drawAssets, 800);
     }
 
     function drawAssets() {
         const svg = document.getElementById('svg-layer'); svg.innerHTML = '';
         const bRect = document.getElementById('board-area').getBoundingClientRect();
-
         Object.keys(jumps).forEach(start => {
             const s = parseInt(start); const e = jumps[s];
             const sEl = document.getElementById(`cell-${s}`).getBoundingClientRect();
@@ -170,10 +162,9 @@
             const y1 = sEl.top - bRect.top + sEl.height/2;
             const x2 = eEl.left - bRect.left + eEl.width/2;
             const y2 = eEl.top - bRect.top + eEl.height/2;
-
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
-            if (e > s) { // TANGGA KAYU
+            if (e > s) {
                 const rail = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 rail.setAttribute("d", `M${x1-10},${y1} L${x2-10},${y2} M${x1+10},${y1} L${x2+10},${y2}`);
                 rail.setAttribute("class", "ladder-rail"); g.appendChild(rail);
@@ -183,30 +174,23 @@
                     stp.setAttribute("x1", lx-15); stp.setAttribute("y1", ly); stp.setAttribute("x2", lx+15); stp.setAttribute("y2", ly);
                     stp.setAttribute("class", "ladder-step"); g.appendChild(stp);
                 }
-            } else { // ULAR LEVEL MAX
-                const midX = (x1 + x2) / 2 + (x1 > x2 ? 50 : -50);
-                const midY = (y1 + y2) / 2;
+            } else {
+                const midX = (x1 + x2) / 2 + (x1 > x2 ? 50 : -50); const midY = (y1 + y2) / 2;
                 const d = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
-
                 const body = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 body.setAttribute("d", d); body.setAttribute("class", "snake-body"); g.appendChild(body);
-                
                 const stripes = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 stripes.setAttribute("d", d); stripes.setAttribute("class", "snake-stripes"); g.appendChild(stripes);
-
                 const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
                 head.setAttribute("cx", x1); head.setAttribute("cy", y1); head.setAttribute("rx", 12); head.setAttribute("ry", 15);
                 head.setAttribute("class", "snake-head");
-                const angle = Math.atan2(y1-y2, x1-x2) * 180 / Math.PI;
-                head.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`); g.appendChild(head);
-
-                // Mata & Lidah
+                const ang = Math.atan2(y1-y2, x1-x2) * 180 / Math.PI;
+                head.setAttribute("transform", `rotate(${ang}, ${x1}, ${y1})`); g.appendChild(head);
                 const eye = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 eye.setAttribute("cx", x1); eye.setAttribute("cy", y1); eye.setAttribute("r", 2); eye.setAttribute("fill", "yellow"); g.appendChild(eye);
-
                 const tongue = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 tongue.setAttribute("d", `M${x1},${y1-15} L${x1},${y1-25} M${x1},${y1-25} L${x1-4},${y1-30} M${x1},${y1-25} L${x1+4},${y1-30}`);
-                tongue.setAttribute("class", "snake-tongue"); tongue.setAttribute("transform", `rotate(${angle}, ${x1}, ${y1})`); g.appendChild(tongue);
+                tongue.setAttribute("class", "snake-tongue"); tongue.setAttribute("transform", `rotate(${ang}, ${x1}, ${y1})`); g.appendChild(tongue);
             }
             svg.appendChild(g);
         });
@@ -216,30 +200,31 @@
         window.onresize = drawAssets;
         db.ref('rooms/'+room).on('value', snap => {
             const data = snap.val(); if(!data) return;
-            const active = data.players[data.turn];
-            document.getElementById('turn-info').innerText = active.name === user ? "🔥 GILIRAN LO!" : `${active.name.toUpperCase()} JALAN`;
-            document.getElementById('dice-val').innerText = data.last;
+            const pActive = data.players[data.turn];
+            document.getElementById('turn-info').innerText = pActive.name === user ? "🔥 GILIRAN LO!" : `${pActive.name.toUpperCase()} JALAN`;
+            document.getElementById('dice-btn').innerText = data.last;
             isMoving = data.moving;
 
             document.querySelectorAll('.pawn').forEach(p => p.remove());
             data.players.forEach((p, i) => {
-                const cell = document.getElementById(`cell-${p.pos}`).getBoundingClientRect();
+                const cell = document.getElementById(`cell-${p.pos}`);
+                if(!cell) return;
+                const rect = cell.getBoundingClientRect();
                 const br = document.getElementById('board-area').getBoundingClientRect();
                 const div = document.createElement('div');
                 div.className = 'pawn';
-                // FIX: Path gambar dipastikan terpanggil
+                // FIX: Foto pemain
                 div.style.backgroundImage = `url('${p.img}')`;
-                div.style.left = `${(cell.left - br.left) + (i*5)}px`;
-                div.style.top = `${(cell.top - br.top) + (i*5)}px`;
+                div.style.left = `${(rect.left - br.left) + (i*4)}px`;
+                div.style.top = `${(rect.top - br.top) + (i*4)}px`;
                 div.innerHTML = `<div class="pawn-name">${p.name}</div>`;
                 document.getElementById('board-area').appendChild(div);
             });
         });
-
         db.ref('chats/'+room).limitToLast(12).on('value', s => {
-            const box = document.getElementById('chat-list'); box.innerHTML = '';
-            s.forEach(c => { box.innerHTML += `<div><b class="text-yellow-500">${c.val().u}:</b> ${c.val().t}</div>`; });
-            box.scrollTop = box.scrollHeight;
+            const b = document.getElementById('chat-list'); b.innerHTML = '';
+            s.forEach(c => { b.innerHTML += `<div><b class="text-yellow-500">${c.val().u}:</b> ${c.val().t}</div>`; });
+            b.scrollTop = b.scrollHeight;
         });
     }
 
@@ -248,36 +233,37 @@
         const data = snap.val();
         if(!data || isMoving || data.players[data.turn].name !== user) return;
 
-        const res = Math.floor(Math.random()*6)+1;
+        const val = Math.floor(Math.random()*6)+1;
         document.getElementById('dice-btn').classList.add('rolling');
-        await db.ref('rooms/'+room).update({moving: true, last: res});
+        await db.ref('rooms/'+room).update({moving: true, last: val});
 
         setTimeout(async () => {
             document.getElementById('dice-btn').classList.remove('rolling');
-            let pList = [...data.players];
-            let p = pList[data.turn];
-            let target = Math.min(p.pos + res, 100);
+            let players = [...data.players];
+            let pIndex = data.turn;
+            let startPos = players[pIndex].pos;
+            let targetPos = Math.min(startPos + val, 100);
 
-            for(let i = p.pos + 1; i <= target; i++) {
-                p.pos = i;
-                await db.ref('rooms/'+room+'/players').set(pList);
+            for(let i = startPos + 1; i <= targetPos; i++) {
+                players[pIndex].pos = i;
+                await db.ref('rooms/'+room+'/players').set(players);
                 await new Promise(r => setTimeout(r, 200));
             }
 
-            if(jumps[p.pos]) {
+            if(jumps[players[pIndex].pos]) {
                 await new Promise(r => setTimeout(r, 600));
-                p.pos = jumps[p.pos];
-                await db.ref('rooms/'+room+'/players').set(pList);
+                players[pIndex].pos = jumps[players[pIndex].pos];
+                await db.ref('rooms/'+room+'/players').set(players);
             }
 
-            if(p.pos === 100) { confetti(); alert("MENANG BRE!"); }
-            db.ref('rooms/'+room).update({turn: (data.turn + 1) % pList.length, moving: false});
+            if(players[pIndex].pos === 100) { confetti(); alert("MENANG!"); }
+            await db.ref('rooms/'+room).update({turn: (pIndex + 1) % players.length, moving: false});
         }, 1000);
     }
 
     function sendChat() {
-        const inp = document.getElementById('chat-in'); if(!inp.value) return;
-        db.ref('chats/'+room).push({u:user, t:inp.value}); inp.value = '';
+        const i = document.getElementById('chat-in'); if(!i.value) return;
+        db.ref('chats/'+room).push({u:user, t:i.value}); i.value = '';
     }
 </script>
 </body>
