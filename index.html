@@ -1,301 +1,160 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>SURVIVAL: ISLAND DEFENSER (JS LITE)</title>
+    <title>SQUAD HARVEST: PS1 EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; user-select: none; }
-        #instructions {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: white;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; cursor: pointer; z-index: 100;
-        }
-        #hud {
-            position: absolute; bottom: 20px; left: 20px; color: white;
-            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; pointer-events: none;
-        }
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 24px; pointer-events: none; opacity: 0.8;
-        }
-        #inventory {
-            position: absolute; bottom: 20px; right: 20px; color: yellow;
-            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; pointer-events: none;
-        }
-        .highlight { color: #4df; font-weight: bold; }
+        body { margin: 0; overflow: hidden; font-family: 'Courier New', monospace; background: #000; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border: 3px solid #fff; pointer-events: none; }
+        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: yellow; font-size: 24px; text-align: center; display: none; background: rgba(0,0,0,0.9); padding: 20px; border: 4px solid #f00; }
+        #crosshair { position: absolute; top: 50%; left: 50%; color: white; font-size: 20px; transform: translate(-50%, -50%); pointer-events: none; }
     </style>
 </head>
 <body>
-
-    <div id="instructions">
-        <h1 style="font-size: 40px; color: #7cfc00; text-shadow: 0 0 10px #7cfc0044;">ISLAND DEFENSER</h1>
-        <p style="font-size: 18px; color: #eee;">- KLIK UNTUK MEMULAI -</p>
-        <p style="font-size: 14px; color: #aaa;">[W,A,S,D] Jalan | [MOUSE] Lihat | [KLIK KIRI] Hancurkan | [KLIK KANAN] Bangun</p>
-        <p style="font-size: 12px; color: #888; margin-top: 20px;">Bangun bentengmu sebelum malam tiba!</p>
+    <div id="ui">
+        <h2 style="margin:0; color: #7cfc00;">SQUAD HARVEST</h2>
+        <hr>
+        HARI: <span id="day">1</span>/10<br>
+        GOLD: <span id="gold">0</span><br>
+        STATUS: <span id="stat">PETANI PEMULA</span>
+        <p style="font-size: 10px; color: #aaa;">*Klik Kiri: Cangkul/Tanam | Masuk Rumah: Tidur</p>
     </div>
-
-    <div id="hud">
-        WAKTU: <span id="time-display" class="highlight">SIANG</span> (<span id="time-counter">30</span>s)
-    </div>
-
-    <div id="inventory">
-        SUMBER DAYA: <span id="resource-count" class="highlight">0</span> BLOK
-    </div>
-
+    <div id="msg"></div>
     <div id="crosshair">+</div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        // === 1. SETUP CORE ===
+        // --- GAME STATE ---
+        let gold = 0, day = 1, resources = 0;
+        const plots = []; // Lahan tanah
+
+        // --- SCENE SETUP ---
         const scene = new THREE.Scene();
-        // Langit Siang (Biru)
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.y = 2; // Tinggi mata pemain
-
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // === 2. CONTROLS ===
         const controls = new PointerLockControls(camera, document.body);
-        const instructions = document.getElementById('instructions');
+        document.addEventListener('click', () => controls.lock());
 
-        instructions.addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => instructions.style.display = 'none');
-        controls.addEventListener('unlock', () => instructions.style.display = 'flex');
+        // --- LIGHTING ---
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 5);
+        scene.add(new THREE.AmbientLight(0x404040), light);
 
-        // === 3. LIGHTING (Siklus Siang-Malam) ===
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Cahaya dasar
-        scene.add(ambientLight);
+        // --- WORLD BUILDING ---
+        const geo = new THREE.BoxGeometry(1, 1, 1);
+        const matGrass = new THREE.MeshLambertMaterial({ color: 0x2d5a27 });
+        const matDirt = new THREE.MeshLambertMaterial({ color: 0x5d3a1a });
+        const matCrop = new THREE.MeshLambertMaterial({ color: 0xffff00 });
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8); // Cahaya matahari
-        sunLight.position.set(10, 20, 10);
-        scene.add(sunLight);
-
-        // === 4. DUNIA & ASET ===
-        let resources = 0;
-        const blocks = []; // Semua blok yang bisa dihancurkan/dibangun
-        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-        
-        // Warna-warna "Jelas" (Stylized)
-        const matGrass = new THREE.MeshLambertMaterial({ color: 0x4d9043 });
-        const matDirt = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
-        const matWood = new THREE.MeshLambertMaterial({ color: 0x5d2906 });
-        const matLeaf = new THREE.MeshLambertMaterial({ color: 0x228b22 });
-
-        // -- Buat Pulau --
-        const islandSize = 12;
-        for (let x = -islandSize; x < islandSize; x++) {
-            for (let z = -islandSize; z < islandSize; z++) {
-                // Lantai Rumput (Blocks)
-                const grass = new THREE.Mesh(boxGeo, matGrass);
-                grass.position.set(x, 0, z);
-                scene.add(grass);
-                blocks.push(grass);
-
-                // Lapisan Tanah di bawahnya
-                for (let y = -1; y > -3; y--) {
-                    const dirt = new THREE.Mesh(boxGeo, matDirt);
-                    dirt.position.set(x, y, z);
-                    scene.add(dirt);
-                    blocks.push(dirt);
-                }
+        // Buat Lahan (Grid 10x10)
+        for(let x=-5; x<5; x++) {
+            for(let z=-5; z<5; z++) {
+                const land = new THREE.Mesh(geo, matGrass);
+                land.position.set(x, 0, z);
+                land.userData = { tilled: false, planted: false, age: 0 };
+                scene.add(land);
+                plots.push(land);
             }
         }
 
-        // -- Tambah Pohon --
-        for (let i = 0; i < 6; i++) {
-            const tx = Math.floor(Math.random() * (islandSize-2)) - (islandSize-4);
-            const tz = Math.floor(Math.random() * (islandSize-2)) - (islandSize-4);
-            
-            // Batang
-            for (let h = 1; h < 4; h++) {
-                const trunk = new THREE.Mesh(boxGeo, matWood);
-                trunk.position.set(tx, h, tz);
-                scene.add(trunk);
-                blocks.push(trunk);
-            }
-            // Daun
-            for(let ly=3; ly<5; ly++){
-                for(let lx=-1; lx<2; lx++){
-                    for(let lz=-1; lz<2; lz++){
-                        const leaf = new THREE.Mesh(boxGeo, matLeaf);
-                        leaf.position.set(tx+lx, ly, tz+lz);
-                        scene.add(leaf);
-                        blocks.push(leaf);
-                    }
-                }
-            }
-        }
+        // Rumah (Tempat Tidur)
+        const house = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+        house.position.set(0, 1, -8);
+        scene.add(house);
 
-        // === 5. LOGIKA MEKANIK (Hancurin & Bangun) ===
+        camera.position.set(0, 2, 5);
+
+        // --- INTERAKSI ---
         const raycaster = new THREE.Raycaster();
-        raycaster.far = 4; // Jarak maksimal interact
-        const mouse = new THREE.Vector2(0, 0); // Crosshair di tengah
-
-        // -- KLIK KIRI: HANCURIN BLOK --
-        window.addEventListener('mousedown', (event) => {
-            if (!controls.isLocked) return;
-            if (event.button !== 0) return; // Bukan Klik Kiri
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(blocks);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const object = intersect.object;
-
-                if (object.position.y >= 0) { // Gak bisa hancurin tanah paling bawah
-                    scene.remove(object);
-                    const index = blocks.indexOf(object);
-                    if (index > -1) blocks.splice(index, 1);
-                    resources++;
-                    document.getElementById('resource-count').innerText = resources;
+        window.addEventListener('mousedown', (e) => {
+            if(!controls.isLocked || e.button !== 0) return;
+            raycaster.setFromCamera(new THREE.Vector2(), camera);
+            const intersects = raycaster.intersectObjects(plots);
+            
+            if(intersects.length > 0) {
+                const p = intersects[0].object;
+                if(!p.userData.tilled) {
+                    p.material = matDirt;
+                    p.userData.tilled = true;
+                } else if(!p.userData.planted) {
+                    const plant = new THREE.Mesh(new THREE.SphereGeometry(0.2), matCrop);
+                    plant.position.set(p.position.x, 0.6, p.position.z);
+                    scene.add(plant);
+                    p.userData.planted = true;
+                    p.userData.cropObj = plant;
                 }
             }
         });
 
-        // -- KLIK KANAN: BANGUN BLOK (BENTENG) --
-        window.addEventListener('mousedown', (event) => {
-            if (!controls.isLocked) return;
-            if (event.button !== 2 && event.code !== 'KeyE') return; // Bukan Klik Kanan / E
-
-            if (resources <= 0) return;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(blocks);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const position = intersect.point.add(intersect.face.normal); // Posisi di depan muka blok yang kena
-
-                // Pembulatan biar pas di grid kotak-kotak
-                position.divideScalar(1).floor().addScalar(0.5);
-
-                const newBlock = new THREE.Mesh(boxGeo, matWood); // Bangun pake blok kayu
-                newBlock.position.copy(position);
-                scene.add(newBlock);
-                blocks.push(newBlock);
-                resources--;
-                document.getElementById('resource-count').innerText = resources;
-            }
+        // --- GAME LOOP ---
+        let moveF = false, moveB = false, moveL = false, moveR = false;
+        document.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyW') moveF = true; if(e.code === 'KeyS') moveB = true;
+            if(e.code === 'KeyA') moveL = true; if(e.code === 'KeyD') moveR = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyW') moveF = false; if(e.code === 'KeyS') moveB = false;
+            if(e.code === 'KeyA') moveL = false; if(e.code === 'KeyD') moveR = false;
         });
 
-        // Prevent Context Menu pas Klik Kanan
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
-
-
-        // === 6. GAME LOOP & PERGERAKAN ===
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-
-        const onKeyDown = (e) => {
-            if (e.code === 'KeyW') moveForward = true;
-            if (e.code === 'KeyA') moveLeft = true;
-            if (e.code === 'KeyS') moveBackward = true;
-            if (e.code === 'KeyD') moveRight = true;
-        };
-        const onKeyUp = (e) => {
-            if (e.code === 'KeyW') moveForward = false;
-            if (e.code === 'KeyA') moveLeft = false;
-            if (e.code === 'KeyS') moveBackward = false;
-            if (e.code === 'KeyD') moveRight = false;
-        };
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', onKeyUp);
-
-        // === SIKLUS SIANG-MALAM ===
-        let gameTime = 0;
-        let isNight = false;
-        const cycleTime = 30; // 30 detik siang, 30 detik malem
-
-        let prevTime = performance.now();
         function animate() {
             requestAnimationFrame(animate);
+            if(controls.isLocked) {
+                const spd = 0.1;
+                if(moveF) controls.moveForward(spd); if(moveB) controls.moveForward(-spd);
+                if(moveL) controls.moveRight(-spd); if(moveR) controls.moveRight(spd);
 
-            if (controls.isLocked) {
-                const time = performance.now();
-                const delta = (time - prevTime) / 1000;
-                gameTime += delta;
-
-                // -- Update Waktu --
-                const timeLeft = Math.ceil(cycleTime - (gameTime % cycleTime));
-                document.getElementById('time-counter').innerText = timeLeft;
-                
-                if (Math.floor(gameTime / cycleTime) % 2 === 1) { // Malam
-                    if (!isNight) {
-                        isNight = true;
-                        scene.background = new THREE.Color(0x051a3d);
-                        scene.fog.color = new THREE.Color(0x051a3d);
-                        ambientLight.intensity = 0.2; // Gelap
-                        sunLight.intensity = 0;
-                        document.getElementById('time-display').innerText = "MALAM";
-                        document.getElementById('time-display').style.color = "#f43f5e";
-                    }
-                } else { // Siang
-                    if (isNight) {
-                        isNight = false;
-                        scene.background = new THREE.Color(0x87CEEB);
-                        scene.fog.color = new THREE.Color(0x87CEEB);
-                        ambientLight.intensity = 1.0; // Terang
-                        sunLight.intensity = 0.8;
-                        document.getElementById('time-display').innerText = "SIANG";
-                        document.getElementById('time-display').style.color = "#7cfc00";
-                    }
+                // Cek Masuk Rumah (Ganti Hari)
+                if(camera.position.distanceTo(house.position) < 2) {
+                    nextDay();
                 }
-
-                // -- Physics Pergerakan (Gesekan & Percepatan) --
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-
-                // -- Batasan Pulau (Biar gak jatuh ke void) --
-                if (camera.position.x > islandSize) camera.position.x = islandSize;
-                if (camera.position.x < -islandSize) camera.position.x = -islandSize;
-                if (camera.position.z > islandSize) camera.position.z = islandSize;
-                if (camera.position.z < -islandSize) camera.position.z = -islandSize;
-
-                prevTime = time;
             }
-
             renderer.render(scene, camera);
         }
 
+        function nextDay() {
+            day++;
+            camera.position.set(0, 2, 5); // Reset ke depan kebun
+            controls.unlock();
+            
+            // Panen Otomatis & Update UI
+            plots.forEach(p => {
+                if(p.userData.planted) {
+                    gold += 150;
+                    scene.remove(p.userData.cropObj);
+                    p.material = matGrass;
+                    p.userData.tilled = false;
+                    p.userData.planted = false;
+                }
+            });
+
+            document.getElementById('day').innerText = day;
+            document.getElementById('gold').innerText = gold;
+
+            if(day > 10) endGame();
+            else alert("Selamat Pagi! Hari ke-" + day + ". Waktunya bekerja!");
+        }
+
+        function endGame() {
+            const m = document.getElementById('msg');
+            m.style.display = 'block';
+            if(gold >= 1000) {
+                m.innerHTML = "<h1>HAPPY ENDING</h1><p>Kebun sukses! Walikota bangga dan lo jadi juragan sayur di pulau!</p>";
+            } else {
+                m.innerHTML = "<h1>SAD ENDING</h1><p>Emas lo dikit banget. Kebun disita buat jadi tempat parkir motor.</p>";
+            }
+        }
+
         animate();
-
-        // Handle Window Resize (Biar ga penyok)
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
     </script>
 </body>
 </html>
