@@ -2,243 +2,187 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD CRAFT: REMASTERED V7</title>
+    <title>SQUAD LADDER 3D: MSI EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; pointer-events: none; z-index: 10; }
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,0.85); padding: 12px; border: 2px solid #555; border-radius: 10px; pointer-events: auto; }
-        .slot { width: 60px; height: 60px; background: #333; border: 3px solid #666; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; text-align: center; }
-        .slot.active { border-color: #00ffcc; box-shadow: 0 0 20px #00ffcc; background: #444; }
-        #stats { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; border-left: 5px solid #ff0000; }
-        #timer { position: absolute; top: 20px; right: 20px; color: #fbbf24; font-size: 32px; font-weight: 900; text-shadow: 2px 2px #000; }
-        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); color: #00ffcc; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #fff; pointer-events: none; z-index: 10; }
+        #controls { position: absolute; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; }
+        button { padding: 20px; font-size: 20px; cursor: pointer; background: #00ffcc; border: none; border-radius: 50px; font-weight: bold; box-shadow: 0 0 20px #00ffcc; }
+        button:hover { transform: scale(1.1); background: #fff; }
+        #log { background: rgba(0,0,0,0.8); padding: 15px; border-left: 5px solid #00ffcc; width: 250px; height: 150px; overflow-y: auto; font-size: 14px; }
+        .turn-indicator { font-size: 24px; color: #fbbf24; text-shadow: 2px 2px #000; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1>SQUAD CRAFT V7</h1>
-    <p>ENGINE: MSI i7 OPTIMIZED | 32GB RAM OK</p>
-    <div style="background: #111; padding: 25px; border: 1px solid #00ffcc; text-align: left; margin: 20px;">
-        [1] TANGAN | [2] KAYU | [3] KACA | [4] OBOR | [5] TANAH<br>
-        KLIK KIRI: Hancurkan | KLIK KANAN: Pasang<br>
-        W,A,S,D: Jalan | SPACE: Loncat | R: Rotasi Kamera
-    </div>
-    <h2>KLIK UNTUK MULAI</h2>
+<div id="ui">
+    <div class="turn-indicator" id="turn">GILIRAN: PLAYER 1</div>
+    <div id="log">Selamat Datang di Squad Ladder!<br>---</div>
 </div>
 
-<div id="ui">
-    <div id="timer">08:00</div>
-    <div id="stats">HP: 100 | ITEM: <span id="item-name">TANGAN</span></div>
-    <div id="hotbar">
-        <div class="slot active" id="s1">HAND</div>
-        <div class="slot" id="s2">WOOD</div>
-        <div class="slot" id="s3">GLASS</div>
-        <div class="slot" id="s4">TORCH</div>
-        <div class="slot" id="s5">DIRT</div>
-    </div>
+<div id="controls">
+    <button id="rollBtn">KOCOK DADU! 🎲</button>
 </div>
-<div id="crosshair"></div>
 
 <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
 </script>
 
 <script type="module">
     import * as THREE from 'three';
-    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-    // --- SETUP ---
-    let scene, camera, renderer, controls, clock;
-    let activeSlot = 1, time = 8;
-    let moveF = false, moveB = false, moveL = false, moveR = false, canJump = false;
-    let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
-    let objects = [], raycaster = new THREE.Raycaster();
-    let ghost, itemInHand;
+    // --- CONFIG SQUAD (GANTI FOTO TEMEN LO DI SINI) ---
+    const PLAYER_SQUAD = [
+        { name: "Meggy", color: 0xff00ff, img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Meggy" }, 
+        { name: "Tegar", color: 0x00ffff, img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tegar" },
+        { name: "Bernad", color: 0xffff00, img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bernad" },
+        { name: "Alvin", color: 0x00ff00, img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alvin" }
+    ];
 
-    const mats = {
-        grass: new THREE.MeshStandardMaterial({ color: 0x2d5a27 }),
-        wood: new THREE.MeshStandardMaterial({ color: 0x5d4037 }),
-        leaves: new THREE.MeshStandardMaterial({ color: 0x1a4a1a, transparent: false }),
-        glass: new THREE.MeshStandardMaterial({ color: 0xade8f4, transparent: true, opacity: 0.5, metalness: 0.5, roughness: 0.1 }),
-        torch: new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00 }),
-        dirt: new THREE.MeshStandardMaterial({ color: 0x3d2b1f })
+    let scene, camera, renderer, board = [];
+    let currentPlayer = 0;
+    let playersModels = [];
+    let playerPos = [0, 0, 0, 0]; // Posisi kotak (0-99)
+
+    // Logika Ular & Tangga (Index Kotak)
+    const shortcuts = {
+        3: 20, 8: 30, 19: 5, 27: 1, 40: 60, 50: 35, 70: 90, 98: 10
     };
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.03);
-
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        scene.background = new THREE.Color(0x050510);
         
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 12, 12);
+        camera.lookAt(0, 0, 0);
+
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        controls = new PointerLockControls(camera, document.body);
-        document.getElementById('overlay').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => document.getElementById('overlay').style.display='none');
-        controls.addEventListener('unlock', () => document.getElementById('overlay').style.display='flex');
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+        const pointLight = new THREE.PointLight(0x00ffcc, 2, 50);
+        pointLight.position.set(0, 10, 0);
+        scene.add(ambLight, pointLight);
 
-        clock = new THREE.Clock();
-
-        const amb = new THREE.AmbientLight(0xffffff, 0.6);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(50, 100, 50); sun.castShadow = true;
-        scene.add(amb, sun);
-        scene.userData = { sun, amb };
-
-        // WORLD
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), mats.grass);
-        ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
-        scene.add(ground); objects.push(ground);
-
-        for(let i=0; i<40; i++) spawnFullTree(Math.random()*100-50, Math.random()*100-50);
-
-        // GHOST
-        ghost = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0.5}));
-        scene.add(ghost);
-
-        createHandItem();
+        createBoard();
+        createPlayers();
         animate();
     }
 
-    function spawnFullTree(x, z) {
-        const treeGroup = new THREE.Group();
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), mats.wood);
-        trunk.position.y = 2; trunk.castShadow = true;
-        treeGroup.add(trunk);
+    function createBoard() {
+        const size = 10;
+        const spacing = 1.1;
+        const loader = new THREE.TextureLoader();
 
-        const leafSize = 3;
-        const leaves = new THREE.Mesh(new THREE.BoxGeometry(leafSize, leafSize, leafSize), mats.leaves);
-        leaves.position.y = 5; leaves.castShadow = true;
-        treeGroup.add(leaves);
+        for (let i = 0; i < 100; i++) {
+            const row = Math.floor(i / 10);
+            const col = row % 2 === 0 ? (i % 10) : (9 - (i % 10));
+            
+            const color = (row + col) % 2 === 0 ? 0x222222 : 0x444444;
+            const geo = new THREE.BoxGeometry(1, 0.2, 1);
+            const mat = new THREE.MeshStandardMaterial({ color: color });
+            
+            // Efek kotak jebakan
+            if (shortcuts[i]) {
+                mat.color.set(shortcuts[i] > i ? 0x00ff00 : 0xff0000);
+                mat.emissive.set(shortcuts[i] > i ? 0x003300 : 0x330000);
+            }
 
-        treeGroup.position.set(x, 0, z);
-        treeGroup.userData = { type: 'tree', hp: 4 };
-        scene.add(treeGroup);
-        objects.push(treeGroup);
+            const cube = new THREE.Mesh(geo, mat);
+            cube.position.set(col * spacing - 5, 0, row * spacing - 5);
+            scene.add(cube);
+            board[i] = cube.position;
+        }
     }
 
-    function createHandItem() {
-        if(itemInHand) camera.remove(itemInHand);
-        
-        itemInHand = new THREE.Group();
-        let model;
-        
-        if(activeSlot === 1) model = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.8), new THREE.MeshStandardMaterial({color: 0xffdbac})); // Tangan
-        else if(activeSlot === 2) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.wood); // Kayu
-        else if(activeSlot === 3) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.glass); // Kaca
-        else if(activeSlot === 4) model = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), mats.torch); // Obor
-        else if(activeSlot === 5) model = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mats.dirt); // Tanah
-
-        itemInHand.add(model);
-        itemInHand.position.set(0.6, -0.5, -0.8); // Posisi FPS
-        camera.add(itemInHand);
-        scene.add(camera);
+    function createPlayers() {
+        const loader = new THREE.TextureLoader();
+        PLAYER_SQUAD.forEach((data, i) => {
+            const group = new THREE.Group();
+            
+            // Pion Badan
+            const body = new THREE.Mesh(
+                new THREE.ConeGeometry(0.3, 0.8, 32),
+                new THREE.MeshStandardMaterial({ color: data.color })
+            );
+            
+            // Muka Temen (Pake Sprite biar selalu madep kamera)
+            const map = loader.load(data.img);
+            const spriteMat = new THREE.SpriteMaterial({ map: map });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.position.y = 0.8;
+            sprite.scale.set(0.6, 0.6, 1);
+            
+            group.add(body, sprite);
+            group.position.copy(board[0]);
+            group.position.y = 0.5;
+            scene.add(group);
+            playersModels.push(group);
+        });
     }
 
-    window.addEventListener('mousedown', (e) => {
-        if(!controls.isLocked) return;
-        raycaster.setFromCamera(new THREE.Vector2(), camera);
-        
-        if(e.button === 0) { // LEFT CLICK: MINING
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5) {
-                let target = hits[0].object;
-                while(target.parent !== scene && target.parent !== null) target = target.parent;
-                if(target !== objects[0]) {
-                    scene.remove(target);
-                    objects.splice(objects.indexOf(target), 1);
-                }
-            }
-            // Animasi Pukul
-            itemInHand.position.z += 0.2; setTimeout(() => itemInHand.position.z -= 0.2, 100);
-        } else if(e.button === 2) { // RIGHT CLICK: BUILD
-            if(activeSlot === 1) return;
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5) {
-                let block;
-                if(activeSlot === 2) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.wood);
-                if(activeSlot === 3) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.glass);
-                if(activeSlot === 4) {
-                    block = new THREE.Group();
-                    block.add(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), mats.torch));
-                    const l = new THREE.PointLight(0xffaa00, 10, 12); l.position.y = 0.5;
-                    block.add(l);
-                }
-                if(activeSlot === 5) block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.dirt);
+    async function rollDice() {
+        const roll = Math.floor(Math.random() * 6) + 1;
+        const p = PLAYER_SQUAD[currentPlayer];
+        addLog(`${p.name} mengocok dadu: **${roll}**`);
 
-                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
-                block.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-                scene.add(block);
-                objects.push(block);
-            }
+        // Update Posisi
+        let newPos = playerPos[currentPlayer] + roll;
+        if (newPos >= 99) {
+            newPos = 99;
+            alert(`${p.name} MENANG! GAME OVER.`);
+            location.reload();
         }
-    });
 
-    window.addEventListener('keydown', (e) => {
-        if(e.code === 'KeyW') moveF = true; if(e.code === 'KeyS') moveB = true;
-        if(e.code === 'KeyA') moveL = true; if(e.code === 'KeyD') moveR = true;
-        if(e.code === 'Space' && canJump) { velocity.y += 12; canJump = false; }
-        if(e.key >= '1' && e.key <= '5') {
-            activeSlot = parseInt(e.key);
-            document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-            document.getElementById('s'+e.key).classList.add('active');
-            document.getElementById('item-name').innerText = document.getElementById('s'+e.key).innerText;
-            createHandItem();
+        playerPos[currentPlayer] = newPos;
+        movePlayerModel(currentPlayer, newPos);
+
+        // Cek Jebakan/Tangga
+        await new Promise(r => setTimeout(r, 600));
+        if (shortcuts[newPos]) {
+            const type = shortcuts[newPos] > newPos ? "TANGGA! 🚀" : "ULAR! 🐍";
+            addLog(`${p.name} kena ${type}`);
+            playerPos[currentPlayer] = shortcuts[newPos];
+            movePlayerModel(currentPlayer, shortcuts[newPos]);
         }
-    });
-    window.addEventListener('keyup', (e) => {
-        if(e.code === 'KeyW') moveF = false; if(e.code === 'KeyS') moveB = false;
-        if(e.code === 'KeyA') moveL = false; if(e.code === 'KeyD') moveR = false;
-    });
+
+        // Ganti Giliran
+        currentPlayer = (currentPlayer + 1) % PLAYER_SQUAD.length;
+        document.getElementById('turn').innerText = `GILIRAN: ${PLAYER_SQUAD[currentPlayer].name}`;
+        document.getElementById('turn').style.color = `#${PLAYER_SQUAD[currentPlayer].color.toString(16)}`;
+    }
+
+    function movePlayerModel(id, posIndex) {
+        const target = board[posIndex];
+        const model = playersModels[id];
+        // Animasi geser sederhana
+        model.position.x = target.x;
+        model.position.z = target.z;
+    }
+
+    function addLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML += msg + "<br>";
+        log.scrollTop = log.scrollHeight;
+    }
 
     function animate() {
         requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-
-        if(controls.isLocked) {
-            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta;
-            velocity.y -= 9.8 * 4 * delta;
-            direction.z = Number(moveF) - Number(moveB); direction.x = Number(moveR) - Number(moveL);
-            direction.normalize();
-            if(moveF || moveB) velocity.z -= direction.z * 150 * delta;
-            if(moveL || moveR) velocity.x -= direction.x * 150 * delta;
-            controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
-            camera.position.y += velocity.y * delta;
-            if(camera.position.y < 2) { velocity.y = 0; camera.position.y = 2; canJump = true; }
-
-            // Ghost Logic
-            raycaster.setFromCamera(new THREE.Vector2(), camera);
-            const hits = raycaster.intersectObjects(objects, true);
-            if(hits.length > 0 && hits[0].distance < 5 && activeSlot > 1) {
-                ghost.visible = true;
-                const pos = hits[0].point.add(hits[0].face.normal.multiplyScalar(0.5));
-                ghost.position.set(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z));
-            } else { ghost.visible = false; }
-
-            // Time & Light
-            time += delta * 0.1;
-            const hour = Math.floor(time) % 24;
-            document.getElementById('timer').innerText = (hour < 10 ? '0'+hour : hour) + ":00";
-            const isNight = hour >= 18 || hour < 6;
-            scene.background.set(isNight ? 0x050515 : 0x87CEEB);
-            scene.userData.sun.intensity = isNight ? 0 : 1.2;
-            scene.userData.amb.intensity = isNight ? 0.05 : 0.6;
-            
-            // Item Sway (Goyang pas jalan)
-            if(moveF || moveB || moveL || moveR) {
-                itemInHand.position.y = -0.5 + Math.sin(Date.now()*0.01)*0.02;
-            }
-        }
+        // Puter kamera dikit biar mantep
+        scene.rotation.y += 0.001;
         renderer.render(scene, camera);
     }
 
+    document.getElementById('rollBtn').addEventListener('click', rollDice);
     init();
-    window.oncontextmenu = (e) => e.preventDefault();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 </script>
 </body>
 </html>
