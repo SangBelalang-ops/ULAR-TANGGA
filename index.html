@@ -2,159 +2,180 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD STICKMAN: HAPPY WORLD</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>MINECRAFT LITE: JS EDITION</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Fredoka One', cursive; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        canvas { background: #fdf6e3; border: 8px solid #fff; border-radius: 30px; box-shadow: 0 10px 0 #ddd; }
-        .ui { position: absolute; top: 20px; width: 750px; display: flex; justify-content: space-between; pointer-events: none; }
-        .heart { font-size: 30px; filter: drop-shadow(0 2px 0 #000); }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #instructions {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px;
+            text-align: center; cursor: pointer; z-index: 10;
+        }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 24px; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div class="ui">
-        <div class="bg-white/80 p-4 rounded-2xl border-4 border-yellow-400">
-            <p id="char-tag" class="text-orange-500 text-xs">Pahlawan: LILAS</p>
-            <div id="hearts-container" class="flex gap-1">❤️❤️❤️❤️❤️</div>
-        </div>
-        <div class="text-center">
-            <h1 class="text-4xl text-white drop-shadow-md">STAGE <span id="wave-num">1</span></h1>
-            <p class="text-blue-600 bg-white rounded-full px-4 py-1 text-sm shadow-sm">SKOR: <span id="score">0</span></p>
-        </div>
+    <div id="instructions">
+        <h1>MINECRAFT LITE</h1>
+        <p>KLIK UNTUK MAIN</p>
+        <p>(W,A,S,D = Jalan | MOUSE = Lihat Sekitar)</p>
     </div>
+    <div id="crosshair">+</div>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // CONFIG GAMPANG BANGET
-    let score = 0, wave = 1, hp = 5, gameActive = true, time = 0;
-    const squad = ["LILAS", "MEGGY", "ALBERT", "ANJAS", "TEGAR", "PITER"];
-    const colors = ["#FF5733", "#C70039", "#900C3F", "#581845", "#1ABC9C", "#3498DB"];
-    let currentChar = 0;
-
-    const player = { x: 100, y: 250, w: 40, h: 70, dy: 0, grounded: true };
-    let bullets = [], enemies = [], items = [], fx = [];
-
-    // FOTO KEPALA (Cek Folder!)
-    const headImgs = squad.map(name => {
-        const img = new Image();
-        img.src = name.toLowerCase() + ".png";
-        return img;
-    });
-
-    window.onkeydown = (e) => {
-        if(e.key >= 1 && e.key <= 6) { 
-            currentChar = e.key - 1; 
-            document.getElementById('char-tag').innerText = "Pahlawan: " + squad[currentChar];
-        }
-        if(e.code === 'Space' || e.code === 'KeyF') shoot();
-        if(e.code === 'KeyW' && player.grounded) { player.dy = -15; player.grounded = false; }
-    };
-
-    function shoot() {
-        // Peluru Gede Biar Gampang Kena
-        bullets.push({ x: player.x + 40, y: player.y + 30, vx: 10, r: 12 });
-    }
-
-    function createExplosion(x, y) {
-        for(let i=0; i<10; i++) {
-            fx.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1, c: colors[Math.floor(Math.random()*6)] });
-        }
-    }
-
-    function update() {
-        if(!gameActive) return;
-        ctx.clearRect(0, 0, 800, 400);
-
-        // Langit & Rumput
-        ctx.fillStyle = "#7cfc00"; ctx.fillRect(0, 320, 800, 80);
-
-        // Player Stickman Lucu
-        ctx.strokeStyle = "#333"; ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(player.x+20, player.y+30); ctx.lineTo(player.x+20, player.y+60); // Badan
-        ctx.moveTo(player.x+20, player.y+60); ctx.lineTo(player.x+10, player.y+80); // Kaki
-        ctx.moveTo(player.x+20, player.y+60); ctx.lineTo(player.x+30, player.y+80);
-        ctx.stroke();
-
-        try {
-            ctx.drawImage(headImgs[currentChar], player.x, player.y, 40, 40);
-        } catch(e) {
-            ctx.fillStyle = colors[currentChar]; ctx.beginPath(); ctx.arc(player.x+20, player.y+20, 20, 0, Math.PI*2); ctx.fill();
-        }
-
-        // Loncat
-        player.y += player.dy; player.dy += 0.8;
-        if(player.y > 240) { player.y = 240; player.dy = 0; player.grounded = true; }
-
-        // Musuh (Monster Lucu)
-        if(time % 100 === 0) {
-            enemies.push({ x: 850, y: 260, w: 50, h: 50, c: colors[Math.floor(Math.random()*6)] });
-        }
-
-        enemies.forEach((e, i) => {
-            e.x -= (2 + wave*0.2); // Pelan-pelan jalannya
-            ctx.fillStyle = e.c;
-            ctx.beginPath(); ctx.roundRect(e.x, e.y, e.w, e.h, 15); ctx.fill();
-            // Mata monster
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x+15, e.y+15, 8, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(e.x+15, e.y+15, 3, 0, Math.PI*2); ctx.fill();
-
-            // Tabrakan
-            if(Math.hypot(e.x-player.x, e.y-player.y) < 40) {
-                enemies.splice(i, 1);
-                hp--; updateHearts();
-                if(hp <= 0) hp = 5; // Kasih nyawa lagi biar ga tamat-tamat
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
             }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // 1. SETUP SCENE
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Langit Biru
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. CONTROLS
+        const controls = new PointerLockControls(camera, document.body);
+        const instructions = document.getElementById('instructions');
+
+        instructions.addEventListener('click', () => {
+            controls.lock();
         });
 
-        // Peluru
-        bullets.forEach((b, i) => {
-            b.x += b.vx;
-            ctx.fillStyle = "#FFD700";
-            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-            
-            enemies.forEach((e, ei) => {
-                if(b.x > e.x && b.x < e.x+50 && b.y > e.y && b.y < e.y+50) {
-                    createExplosion(e.x+25, e.y+25);
-                    enemies.splice(ei, 1);
-                    bullets.splice(i, 1);
-                    score += 10;
-                    document.getElementById('score').innerText = score;
-                }
-            });
+        controls.addEventListener('lock', () => {
+            instructions.style.display = 'none';
         });
 
-        // Efek Ledakan
-        fx.forEach((f, i) => {
-            f.x += f.vx; f.y += f.vy; f.life -= 0.02;
-            ctx.fillStyle = f.c; ctx.globalAlpha = f.life;
-            ctx.fillRect(f.x, f.y, 6, 6);
-            if(f.life <= 0) fx.splice(i, 1);
+        controls.addEventListener('unlock', () => {
+            instructions.style.display = 'block';
         });
-        ctx.globalAlpha = 1;
 
-        // Auto Next Stage
-        if(score > wave * 100) {
-            wave++;
-            document.getElementById('wave-num').innerText = wave;
+        // 3. LIGHTING (Biar Real)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
+
+        // 4. BUAT DUNIA (Blocks)
+        const loader = new THREE.TextureLoader();
+        // Fallback warna kalau gambar gak ke-load
+        const grassMat = new THREE.MeshLambertMaterial({ color: 0x4d9043 });
+        const dirtMat = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+
+        for (let x = -15; x < 15; x++) {
+            for (let z = -15; z < 15; z++) {
+                // Lantai Rumput
+                const grass = new THREE.Mesh(boxGeo, grassMat);
+                grass.position.set(x, 0, z);
+                scene.add(grass);
+
+                // Lapisan Tanah di bawahnya
+                const dirt = new THREE.Mesh(boxGeo, dirtMat);
+                dirt.position.set(x, -1, z);
+                scene.add(dirt);
+            }
         }
 
-        time++;
-        requestAnimationFrame(update);
-    }
+        // Tambah beberapa pohon "absurd" (tumpukan block)
+        for (let i = 0; i < 10; i++) {
+            const tx = Math.floor(Math.random() * 20) - 10;
+            const tz = Math.floor(Math.random() * 20) - 10;
+            
+            // Batang
+            for (let h = 1; h < 4; h++) {
+                const trunk = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x5d2906 }));
+                trunk.position.set(tx, h, tz);
+                scene.add(trunk);
+            }
+            // Daun
+            const leaf = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x228b22 }));
+            leaf.position.set(tx, 4, tz);
+            scene.add(leaf);
+        }
 
-    function updateHearts() {
-        let h = ""; for(let i=0; i<hp; i++) h += "❤️";
-        document.getElementById('hearts-container').innerText = h;
-    }
+        camera.position.y = 2; // Tinggi mata pemain
 
-    update();
-</script>
+        // 5. MOVEMENT LOGIC
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        const onKeyDown = (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+            }
+        };
+
+        const onKeyUp = (event) => {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        // 6. ANIMATION LOOP
+        let prevTime = performance.now();
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (controls.isLocked) {
+                const time = performance.now();
+                const delta = (time - prevTime) / 1000;
+
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                prevTime = time;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
 </body>
 </html>
