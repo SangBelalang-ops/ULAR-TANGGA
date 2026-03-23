@@ -3,40 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLAUST OMNI-KEYBOARD PIANO</title>
+    <title>FLAUST PURE-PHYSICS PIANO</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         .studio-header { background: #0f172a; padding: 20px 40px; border-bottom: 2px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
-        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 40px; }
-        .piano-body { display: flex; position: relative; height: 350px; margin: 0 auto; background: #000; padding: 5px; border-radius: 12px; border-top: 25px solid #1e293b; box-shadow: 0 50px 100px rgba(0,0,0,0.9); }
-        
+        .piano-outer { flex: 1; overflow-x: auto; display: flex; align-items: center; padding: 20px; }
+        .piano-body { display: flex; position: relative; height: 320px; margin: 0 auto; background: #000; padding: 5px; border-radius: 12px; border-top: 20px solid #1e293b; box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
         .key { cursor: pointer; user-select: none; position: relative; transition: all 0.05s; }
-        .white-key { width: 50px; height: 320px; background: linear-gradient(to bottom, #fff 0%, #cbd5e1 100%); border: 1px solid #94a3b8; border-radius: 0 0 8px 8px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; }
-        .white-key.active { background: #fbbf24 !important; transform: translateY(8px); }
-        .black-key { width: 32px; height: 200px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 5px 5px; z-index: 2; margin-left: -16px; margin-right: -16px; border: 1px solid #000; }
-        .black-key.active { background: #f59e0b !important; transform: translateY(5px); }
-        
-        .key-label { position: absolute; bottom: 35px; font-size: 11px; color: #f59e0b; font-weight: 900; z-index: 10; pointer-events: none; text-shadow: 0 0 5px rgba(0,0,0,0.2); }
-        .sustain-btn { background: #1e293b; padding: 10px 25px; border-radius: 10px; font-size: 14px; font-weight: 800; border: 2px solid #334155; transition: 0.3s; }
-        .sustain-btn.active { background: #f59e0b; color: #000; border-color: #fbbf24; box-shadow: 0 0 25px rgba(245,158,11,0.5); }
-        
-        #loading { position: fixed; inset: 0; background: #020617; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .white-key { width: 50px; height: 300px; background: linear-gradient(to bottom, #fff 0%, #cbd5e1 100%); border: 1px solid #94a3b8; border-radius: 0 0 8px 8px; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; }
+        .white-key.active { background: #fbbf24 !important; transform: translateY(6px); }
+        .black-key { width: 32px; height: 180px; background: linear-gradient(to bottom, #334155 0%, #000 100%); border-radius: 0 0 5px 5px; z-index: 2; margin-left: -16px; margin-right: -16px; border: 1px solid #000; }
+        .black-key.active { background: #f59e0b !important; transform: translateY(4px); }
+        .key-label { position: absolute; bottom: 35px; font-size: 11px; color: #f59e0b; font-weight: 900; z-index: 10; pointer-events: none; }
+        .sustain-btn { background: #1e293b; padding: 10px 25px; border-radius: 10px; font-size: 14px; font-weight: 800; border: 2px solid #334155; }
+        .sustain-btn.active { background: #f59e0b; color: #000; border-color: #fbbf24; box-shadow: 0 0 20px rgba(245,158,11,0.5); }
     </style>
 </head>
 <body>
 
-<div id="loading">
-    <div class="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-    <p class="text-lg font-black tracking-widest text-yellow-500 italic">TUNING FLAUST ENGINE...</p>
-</div>
-
 <div class="studio-header">
     <div>
-        <h1 class="text-3xl font-black italic tracking-tighter text-white">FLAUST <span class="text-yellow-500 underline">OMNI-88</span></h1>
-        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em]">Recursive Arts Standard Synthesis</p>
+        <h1 class="text-3xl font-black italic text-white tracking-tighter">FLAUST <span class="text-yellow-500 underline">PHYSICS</span></h1>
+        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No-Latency Engine // 88 Keys Hybrid</p>
     </div>
     <button id="sus-btn" class="sustain-btn" onclick="toggleSustain()">SUSTAIN OFF</button>
 </div>
@@ -46,32 +36,24 @@
 </div>
 
 <script>
-    // FULL MAPPING: Angka, QWERTY, ASDF, ZXCV
-    const keyMap = {
-        // Baris 1-0 (High)
-        '1':'C5', '2':'C#5', '3':'D5', '4':'D#5', '5':'E5', '6':'F5', '7':'F#5', '8':'G5', '9':'G#5', '0':'A5', '-':'A#5', '=':'B5',
-        // Baris Q-P (Mid High)
-        'Q':'C4', 'W':'C#4', 'E':'D4', 'R':'D#4', 'T':'E4', 'Y':'F4', 'U':'F#4', 'I':'G4', 'O':'G#4', 'P':'A4', '[':'A#4', ']':'B4',
-        // Baris A-L (Mid Low)
-        'A':'C3', 'S':'C#3', 'D':'D3', 'F':'D#3', 'G':'E3', 'H':'F3', 'J':'F#3', 'K':'G3', 'L':'G#3', ';':'A3', "'":'A#3',
-        // Baris Z-M (Bass)
-        'Z':'C2', 'X':'C#2', 'C':'D2', 'V':'D#2', 'B':'E2', 'N':'F2', 'M':'F#2', ',':'G2', '.':'G#2', '/':'A2'
-    };
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const mainGain = audioCtx.createGain();
+    mainGain.connect(audioCtx.destination);
+    mainGain.gain.value = 0.5;
 
-    const sampler = new Tone.Sampler({
-        urls: { "A0":"A0.mp3", "C1":"C1.mp3", "D#1":"Ds1.mp3", "F#1":"Fs1.mp3", "A1":"A1.mp3", "C2":"C2.mp3", "D#2":"Ds2.mp3", "F#2":"Fs2.mp3", "A2":"A2.mp3", "C3":"C3.mp3", "D#3":"Ds3.mp3", "F#3":"Fs3.mp3", "A3":"A3.mp3", "C4":"C4.mp3", "D#4":"Ds4.mp3", "F#4":"Fs4.mp3", "A4":"A4.mp3", "C5":"C5.mp3", "D#5":"Ds5.mp3", "F#5":"Fs5.mp3", "A5":"A5.mp3", "C6":"C6.mp3", "D#6":"Ds6.mp3", "F#6":"Fs6.mp3", "A6":"A6.mp3", "C7":"C7.mp3", "D#7":"Ds7.mp3", "F#7":"Fs7.mp3", "A7":"A7.mp3", "C8":"C8.mp3" },
-        baseUrl: "https://tonejs.github.io/audio/salamander/",
-        release: 1,
-        onload: () => {
-            document.getElementById('loading').style.opacity = '0';
-            setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
-        }
-    }).toDestination();
+    // Mapping Keyboard Lengkap
+    const keyMap = {
+        '1':'C5', '2':'C#5', '3':'D5', '4':'D#5', '5':'E5', '6':'F5', '7':'F#5', '8':'G5', '9':'G#5', '0':'A5',
+        'Q':'C4', 'W':'C#4', 'E':'D4', 'R':'D#4', 'T':'E4', 'Y':'F4', 'U':'F#4', 'I':'G4', 'O':'G#4', 'P':'A4',
+        'A':'C3', 'S':'C#3', 'D':'D3', 'F':'D#3', 'G':'E3', 'H':'F3', 'J':'F#3', 'K':'G3', 'L':'G#3',
+        'Z':'C2', 'X':'C#2', 'C':'D2', 'V':'D#2', 'B':'E2', 'N':'F2', 'M':'F#2'
+    };
 
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     let sustain = false;
-    let activeKeys = new Set();
+    let activeOscs = {};
 
+    // Build Piano
     const piano = document.getElementById('piano');
     for (let i = 0; i < 88; i++) {
         const nIdx = (i + 9) % 12;
@@ -97,19 +79,63 @@
         piano.appendChild(keyDiv);
     }
 
+    function getFreq(note) {
+        const name = note.slice(0, -1);
+        const oct = parseInt(note.slice(-1));
+        const idx = notes.indexOf(name);
+        return 440 * Math.pow(2, (idx - 9 + (oct - 4) * 12) / 12);
+    }
+
     function play(n) {
-        if (Tone.context.state !== 'running') Tone.start();
-        sampler.triggerAttack(n);
+        if (activeOscs[n]) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const freq = getFreq(n);
+        const osc = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+
+        // Hybrid Sound Modeling (Campuran Triangle & Sine biar suara piano tebel)
+        osc.type = 'triangle'; 
+        osc2.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc2.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc2.detune.setValueAtTime(2, audioCtx.currentTime); // Efek resonansi kayu
+
+        g.gain.setValueAtTime(0, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.01); // Attack instan
+        
+        // Peluruhan suara alami
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2.5);
+
+        osc.connect(g);
+        osc2.connect(g);
+        g.connect(mainGain);
+
+        osc.start();
+        osc2.start();
+
+        activeOscs[n] = { osc, osc2, g };
         const el = document.getElementById(`note-${n}`);
         if(el) el.classList.add('active');
     }
 
     function stop(n) {
-        if (!sustain) {
-            sampler.triggerRelease(n);
-            const el = document.getElementById(`note-${n}`);
-            if(el) el.classList.remove('active');
-        }
+        if (!activeOscs[n] || sustain) return;
+        const { osc, osc2, g } = activeOscs[n];
+        const now = audioCtx.currentTime;
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+        
+        setTimeout(() => {
+            osc.stop();
+            osc2.stop();
+            delete activeOscs[n];
+        }, 100);
+
+        const el = document.getElementById(`note-${n}`);
+        if(el) el.classList.remove('active');
     }
 
     function toggleSustain() {
@@ -118,28 +144,21 @@
         btn.innerText = sustain ? "SUSTAIN ON" : "SUSTAIN OFF";
         btn.classList.toggle('active');
         if (!sustain) {
-            sampler.releaseAll();
-            document.querySelectorAll('.key').forEach(k => k.classList.remove('active'));
+            Object.keys(activeOscs).forEach(n => stop(n));
         }
     }
 
     window.addEventListener('keydown', (e) => {
         const char = e.key.toUpperCase();
         if (e.code === 'Space') { e.preventDefault(); toggleSustain(); return; }
-        const note = keyMap[char] || keyMap[e.key]; // Support simbol juga
-        if (note && !activeKeys.has(char)) {
-            activeKeys.add(char);
-            play(note);
-        }
+        const note = keyMap[char];
+        if (note) play(note);
     });
 
     window.addEventListener('keyup', (e) => {
         const char = e.key.toUpperCase();
-        const note = keyMap[char] || keyMap[e.key];
-        if (note) {
-            activeKeys.delete(char);
-            stop(note);
-        }
+        const note = keyMap[char];
+        if (note) stop(note);
     });
 </script>
 </body>
