@@ -1,26 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SQUAD HERO V3 - NOTES FIXED</title>
+    <title>SQUAD FISHING - SIHANOUKVILLE EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
-        #ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; color: #fff; text-align: center; }
-        #setup { position: absolute; inset: 0; background: #111; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn { padding: 20px 60px; font-size: 25px; cursor: pointer; background: #00d4ff; border: none; border-radius: 15px; font-weight: 900; color: #000; }
-        #stats { position: absolute; top: 20px; left: 20px; font-size: 30px; text-align: left; }
-        #combo { font-size: 50px; color: #f1c40f; }
+        body { margin: 0; overflow: hidden; background: #001a33; font-family: 'Arial Black', sans-serif; }
+        #ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; color: white; }
+        #setup { position: absolute; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+        
+        .btn { padding: 15px 40px; font-size: 20px; cursor: pointer; background: #00d4ff; border: none; border-radius: 10px; font-weight: bold; }
+        
+        #tension-bar { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 30px; background: rgba(255,255,255,0.2); 
+            border: 3px solid #fff; display: none; overflow: hidden;
+        }
+        #tension-fill { width: 0%; height: 100%; background: #2ecc71; transition: 0.1s; }
+        
+        #msg { position: absolute; top: 50%; width: 100%; text-align: center; font-size: 40px; text-shadow: 2px 2px #000; opacity: 0; transition: 0.3s; }
+        #stats { position: absolute; top: 20px; left: 20px; font-size: 24px; color: #00d4ff; }
     </style>
 </head>
 <body>
 
 <div id="setup">
-    <h1 style="color: #00d4ff; font-size: 50px;">SQUAD HERO V3</h1>
-    <p style="color: #666;">FIXED NOTES VISUAL</p>
-    <button class="btn" onclick="startPlay()">START SHREDDING! 🎸</button>
+    <h1 style="color: #00d4ff;">SQUAD FISHING SIM</h1>
+    <p style="color: #aaa;">LOKASI: SIHANOUKVILLE COAST</p>
+    <button class="btn" onclick="startFishing()">LEMPAR KAIL! 🎣</button>
 </div>
 
 <div id="ui">
-    <div id="stats">SKOR: <span id="sc">0</span><br><span id="combo">0x</span></div>
+    <div id="stats">HASIL TANGKAPAN: <span id="count">0</span> kg</div>
+    <div id="msg">STRIKE!!!</div>
+    <div id="tension-bar"><div id="tension-fill"></div></div>
 </div>
 
 <script type="importmap">
@@ -30,121 +41,103 @@
 <script type="module">
     import * as THREE from 'three';
 
-    let scene, camera, renderer, audioCtx;
-    let notes = [], score = 0, combo = 0, startTime = 0;
-    let isPlaying = false;
+    let scene, camera, renderer, water;
+    let isFishing = false, isHooked = false, tension = 0;
+    let fishCount = 0;
 
-    // TRACK: Detik muncul, Key (0-3)
-    const TRACK = [
-        {t: 1, k: 0}, {t: 2, k: 1}, {t: 3, k: 2}, {t: 4, k: 3},
-        {t: 5, k: 0}, {t: 5.5, k: 1}, {t: 6, k: 2}, {t: 6.5, k: 3},
-        {t: 8, k: 0}, {t: 8.2, k: 0}, {t: 9, k: 1}, {t: 9.5, k: 2},
-        {t: 10, k: 3}, {t: 11, k: 0}, {t: 12, k: 1}, {t: 13, k: 2}
-    ];
-
-    const COLORS = [0x00ff00, 0xff0000, 0xffff00, 0x00aaff];
-    const KEYS = ["KeyA", "KeyS", "KeyK", "KeyL"];
-
-    window.startPlay = () => {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function startFishing() {
         document.getElementById('setup').style.display = 'none';
         init();
-    };
+    }
+    window.startFishing = startFishing;
 
     function init() {
         scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x001a33);
+        scene.fog = new THREE.FogExp2(0x001a33, 0.02);
+
         camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 12); camera.lookAt(0, 0, 0);
+        camera.position.set(0, 5, 15); camera.lookAt(0, 0, 0);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+        scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-        // Papan Jalan
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(8, 200), new THREE.MeshStandardMaterial({color: 0x111111}));
-        road.rotation.x = -Math.PI/2;
-        scene.add(road);
+        // Permukaan Air
+        const waterGeo = new THREE.PlaneGeometry(100, 100, 32, 32);
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.8, wireframe: false });
+        water = new THREE.Mesh(waterGeo, waterMat);
+        water.rotation.x = -Math.PI/2;
+        scene.add(water);
 
-        // Garis Target (HIT ZONE)
-        const target = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.6), new THREE.MeshBasicMaterial({color: 0xffffff}));
-        target.rotation.x = -Math.PI/2;
-        target.position.set(0, 0.1, 8); // Di bawah kamera pas
-        scene.add(target);
+        // Pelampung (Bobber)
+        const bobber = new THREE.Mesh(
+            new THREE.SphereGeometry(0.3, 16, 16),
+            new THREE.MeshStandardMaterial({color: 0xff0000})
+        );
+        bobber.position.set(0, 0, 5);
+        scene.add(bobber);
 
-        // Spawn Semua Notes
-        TRACK.forEach(n => {
-            const ball = new THREE.Mesh(
-                new THREE.SphereGeometry(0.5, 32, 16),
-                new THREE.MeshStandardMaterial({color: COLORS[n.k], emissive: COLORS[n.k], emissiveIntensity: 2})
-            );
-            // Spawn posisi Z jauh berdasarkan waktu detik
-            ball.position.set(n.k*2 - 3, 0.5, n.t * -25); 
-            scene.add(ball);
-            notes.push({mesh: ball, time: n.t, key: n.k, hit: false});
-        });
-
-        startTime = Date.now();
-        isPlaying = true;
         animate();
+        waitLevel();
     }
 
+    function waitLevel() {
+        // Simulasi nunggu ikan makan umpan
+        setTimeout(() => {
+            const hitMsg = document.getElementById('msg');
+            hitMsg.innerText = "STRIKE! PENCET SPASI TERUS!";
+            hitMsg.style.opacity = 1;
+            document.getElementById('tension-bar').style.display = 'block';
+            isHooked = true;
+        }, 3000 + Math.random() * 5000);
+    }
+
+    // Input Control
     window.addEventListener('keydown', (e) => {
-        if(!isPlaying) return;
-        const idx = KEYS.indexOf(e.code);
-        if(idx === -1) return;
-
-        playTone(idx);
-        const now = (Date.now() - startTime) / 1000;
-
-        for(let n of notes) {
-            // Cek jarak nada ke hit zone (z=8)
-            const dist = Math.abs(n.mesh.position.z - 8);
-            if(!n.hit && n.key === idx && dist < 1.5) {
-                n.hit = true;
-                n.mesh.visible = false;
-                score += 100; combo++;
-                updateUI();
-                return;
-            }
+        if(e.code === 'Space' && isHooked) {
+            tension += 15; // Tarik!
         }
-        combo = 0; updateUI();
     });
 
-    function playTone(k) {
-        if(!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.frequency.value = [261, 329, 392, 523][k];
-        osc.type = 'sawtooth';
-        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-    }
-
-    function updateUI() {
-        document.getElementById('sc').innerText = score;
-        document.getElementById('combo').innerText = combo + "x";
-    }
-
     function animate() {
-        if(!isPlaying) return;
         requestAnimationFrame(animate);
-        const elapsed = (Date.now() - startTime) / 1000;
-
-        notes.forEach(n => {
-            if(!n.hit) {
-                // Kecepatan 25 unit per detik menuju arah positif Z (kamera)
-                n.mesh.position.z = (elapsed * 25) + (n.time * -25);
-                
-                // Jika lewat kamera tapi gak dipencet
-                if(n.mesh.position.z > 10 && !n.hit) {
-                    n.hit = true; combo = 0; updateUI();
-                }
+        
+        // Animasi Air MSI Edition (Gelombang Halus)
+        water.geometry.attributes.position.array.forEach((v, i) => {
+            if(i % 3 === 2) { // z-axis in plane geometry
+                water.geometry.attributes.position.array[i] = Math.sin(Date.now() * 0.002 + i) * 0.2;
             }
         });
+        water.geometry.attributes.position.needsUpdate = true;
+
+        if(isHooked) {
+            tension -= 0.5; // Ikan narik balik
+            if(tension < 0) tension = 0;
+            
+            const fill = document.getElementById('tension-fill');
+            fill.style.width = tension + '%';
+            
+            // Warna bar berubah kalau mau putus
+            if(tension > 80) fill.style.background = '#e74c3c';
+            else fill.style.background = '#2ecc71';
+
+            if(tension >= 100) { // BERHASIL!
+                isHooked = false;
+                tension = 0;
+                fishCount += Math.floor(Math.random() * 5) + 1;
+                document.getElementById('count').innerText = fishCount;
+                document.getElementById('msg').innerText = "DAPET IKAN! 🎉";
+                document.getElementById('tension-bar').style.display = 'none';
+                setTimeout(() => {
+                    document.getElementById('msg').style.opacity = 0;
+                    waitLevel();
+                }, 2000);
+            }
+        }
+
         renderer.render(scene, camera);
     }
 </script>
