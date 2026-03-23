@@ -2,46 +2,40 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD LADDER ONLINE: MSI ULTRA</title>
+    <title>SQUAD LADDER: REAL 3D EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', sans-serif; }
         #ui { position: absolute; inset: 0; pointer-events: none; color: white; z-index: 10; }
-        #setup { position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+        #setup { position: absolute; inset: 0; background: #16213e; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
         #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; pointer-events: auto; }
-        .btn { padding: 18px 45px; font-size: 20px; cursor: pointer; background: #00d4ff; border: none; border-radius: 50px; font-weight: bold; color: #000; transition: 0.3s; box-shadow: 0 0 20px rgba(0,212,255,0.5); }
-        .btn:hover { transform: scale(1.1); background: #fff; box-shadow: 0 0 30px #00d4ff; }
-        .btn:disabled { background: #444; cursor: not-allowed; box-shadow: none; }
-        #log { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 12px; width: 280px; border-left: 5px solid #00d4ff; height: 180px; overflow-y: auto; font-size: 14px; line-height: 1.6; }
-        .status { position: absolute; top: 20px; right: 20px; font-size: 26px; font-weight: 900; color: #00ffcc; text-shadow: 0 0 10px #00ffcc; }
-        input { padding: 15px; width: 250px; margin: 15px; border-radius: 10px; border: 2px solid #00d4ff; background: #222; color: #fff; font-size: 18px; text-align: center; }
-        #dice-result { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; font-weight: 900; color: #fff; opacity: 0; transition: 0.5s; pointer-events: none; text-shadow: 0 0 50px #00d4ff; }
+        .btn { padding: 15px 40px; font-size: 20px; cursor: pointer; background: #e94560; border: none; border-radius: 10px; font-weight: bold; color: #fff; transition: 0.3s; box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
+        .btn:hover:not(:disabled) { transform: translateY(-3px); background: #ff4d6d; }
+        .btn:disabled { background: #444; opacity: 0.5; }
+        #log { position: absolute; top: 20px; left: 20px; background: rgba(15, 52, 96, 0.9); padding: 20px; border-radius: 12px; width: 250px; border-bottom: 5px solid #e94560; height: 150px; overflow-y: auto; font-size: 14px; }
+        .status { position: absolute; top: 20px; right: 20px; font-size: 24px; font-weight: bold; color: #00ffcc; text-shadow: 2px 2px #000; }
+        input { padding: 12px; width: 220px; margin: 15px; border-radius: 8px; border: none; font-size: 18px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="setup">
-    <h1 style="color: #00d4ff; font-size: 48px; margin-bottom: 0;">SQUAD LADDER</h1>
-    <p style="letter-spacing: 5px; color: #555;">ONLINE MULTIPLAYER ENGINE</p>
-    <input type="text" id="playerName" placeholder="Input Nama SQUAD...">
-    <button class="btn" onclick="startGame()">CONNECT TO SERVER</button>
-    <p style="margin-top: 20px; color: #444; font-size: 12px;">HARDWARE: MSI i7 32GB RAM OPTIMIZED</p>
+    <h1 style="color: #e94560; font-size: 50px; margin-bottom: 10px;">SQUAD LADDER 🐍</h1>
+    <p style="color: #00ffcc;">ONLINE MULTIPLAYER REAL-TIME</p>
+    <input type="text" id="playerName" placeholder="Nama Kamu...">
+    <button class="btn" onclick="startGame()">MASUK ARENA</button>
 </div>
 
 <div id="ui">
-    <div id="log"><b>SYSTEM LOG:</b><br><span id="msg">Menghubungkan ke Firebase...</span></div>
-    <div class="status" id="turnInfo">WAITING...</div>
-    <div id="dice-result">6</div>
-    <div id="controls">
-        <button id="rollBtn" class="btn" onclick="handleRoll()" disabled>ROLL DICE! 🎲</button>
-    </div>
+    <div id="log"><b>GAME LOG:</b><br><span id="msg">Ayo mabar, Vin!</span></div>
+    <div class="status" id="turnInfo">MENUNGGU...</div>
+    <div id="controls"><button id="rollBtn" class="btn" onclick="handleRoll()" disabled>KOCOK DADU! 🎲</button></div>
 </div>
 
 <script type="importmap">
     { "imports": { 
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
         "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-        "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js",
-        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js"
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
     } }
 </script>
 
@@ -49,9 +43,7 @@
     import * as THREE from 'three';
     import { initializeApp } from 'firebase/app';
     import { getDatabase, ref, set, onValue, update, get } from 'firebase/database';
-    import { getAnalytics } from 'firebase/analytics';
 
-    // === CONFIG FIREBASE ALVIN (SUDAH SIAP TEMPEL) ===
     const firebaseConfig = {
         apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
         authDomain: "ulartanggasquad.firebaseapp.com",
@@ -59,30 +51,24 @@
         projectId: "ulartanggasquad",
         storageBucket: "ulartanggasquad.firebasestorage.app",
         messagingSenderId: "492517449717",
-        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc",
-        measurementId: "G-QQY0R81JJ6"
+        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const analytics = getAnalytics(app);
     const gameRef = ref(db, 'squad_ladder/state');
 
-    // === ENGINE VARIABLES ===
-    let scene, camera, renderer, clock;
-    let myName = "", myId = null;
-    let playerModels = {};
-    let boardPos = [];
-    let isMoving = false;
-    let targetCamPos = new THREE.Vector3(0, 15, 12);
+    let scene, camera, renderer, myName = "", myId = null;
+    let playerModels = {}, boardPos = [];
+    let isMoving = false, targetCamPos = new THREE.Vector3(0, 15, 12);
     let targetLookAt = new THREE.Vector3(0, 0, 0);
 
-    const LADDERS = { 3: 22, 12: 40, 28: 55, 45: 70, 72: 91 };
-    const SNAKES = { 25: 5, 52: 20, 65: 35, 88: 40, 98: 10 };
+    const LADDERS = { 3: 21, 8: 30, 28: 54, 58: 77, 75: 95 };
+    const SNAKES = { 25: 6, 44: 19, 68: 48, 91: 71, 98: 10 };
 
     window.startGame = () => {
         myName = document.getElementById('playerName').value.trim();
-        if(!myName) return alert("Woi Alvin! Masukin nama dulu!");
+        if(!myName) return alert("Nama jangan kosong dong!");
         document.getElementById('setup').style.display = 'none';
         initThree();
         syncWithFirebase();
@@ -90,166 +76,136 @@
 
     function initThree() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x020205);
-        scene.fog = new THREE.Fog(0x020205, 15, 60);
-
+        scene.background = new THREE.Color(0x1a1a2e);
         camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-        
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        const amb = new THREE.AmbientLight(0xffffff, 0.4);
-        const sun = new THREE.PointLight(0x00d4ff, 3, 100);
-        sun.position.set(0, 20, 10);
-        scene.add(amb, sun);
-
-        // Langit Berbintang (Particle)
-        const starGeo = new THREE.BufferGeometry();
-        const starCoords = [];
-        for(let i=0; i<2000; i++) starCoords.push(Math.random()*200-100, Math.random()*200-100, Math.random()*200-100);
-        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.1})));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7);
+        scene.add(light);
 
         createBoard();
+        createObstacles(); // GANTINYA CATUR: TAMBAH ULAR & TANGGA
         animate();
     }
 
     function createBoard() {
-        const geo = new THREE.BoxGeometry(1, 0.3, 1);
         for(let i=0; i<100; i++) {
             const row = Math.floor(i / 10);
             const col = row % 2 === 0 ? (i % 10) : (9 - (i % 10));
-            
-            const isSpecial = LADDERS[i] || SNAKES[i];
+            const geo = new THREE.BoxGeometry(1.1, 0.2, 1.1);
             const mat = new THREE.MeshStandardMaterial({ 
-                color: (row + col) % 2 === 0 ? 0x151515 : 0x252525,
-                emissive: LADDERS[i] ? 0x00ff00 : (SNAKES[i] ? 0xff0000 : 0x000000),
-                emissiveIntensity: isSpecial ? 0.8 : 0
+                color: (row + col) % 2 === 0 ? 0xffffff : 0xeeeeee,
+                metalness: 0.1, roughness: 0.8
             });
-            
             const tile = new THREE.Mesh(geo, mat);
-            tile.position.set(col * 1.15 - 5.2, 0, row * 1.15 - 5.2);
+            tile.position.set(col * 1.2 - 5.4, 0, row * 1.2 - 5.4);
             scene.add(tile);
             boardPos[i] = tile.position.clone();
         }
+    }
+
+    function createObstacles() {
+        // VISUAL ULAR (Tube Merah)
+        Object.entries(SNAKES).forEach(([start, end]) => {
+            const curve = new THREE.QuadraticBezierCurve3(
+                boardPos[start].clone().add(new THREE.Vector3(0, 0.2, 0)),
+                new THREE.Vector3((boardPos[start].x + boardPos[end].x)/2, 2, (boardPos[start].z + boardPos[end].z)/2),
+                boardPos[end].clone().add(new THREE.Vector3(0, 0.2, 0))
+            );
+            const geo = new THREE.TubeGeometry(curve, 20, 0.1, 8, false);
+            scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0xff0000})));
+        });
+
+        // VISUAL TANGGA (Dua tiang Hijau)
+        Object.entries(LADDERS).forEach(([start, end]) => {
+            for(let side = -0.3; side <= 0.3; side += 0.6) {
+                const curve = new THREE.LineCurve3(
+                    boardPos[start].clone().add(new THREE.Vector3(side, 0.1, 0)),
+                    boardPos[end].clone().add(new THREE.Vector3(side, 0.1, 0))
+                );
+                const geo = new THREE.TubeGeometry(curve, 2, 0.05, 8, false);
+                scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0x00ff00})));
+            }
+        });
     }
 
     async function syncWithFirebase() {
         onValue(gameRef, (snapshot) => {
             const data = snapshot.val();
             if(!data) {
-                set(gameRef, { turn: 0, players: [{name: myName, pos: 0, color: '#00d4ff'}] });
+                set(gameRef, { turn: 0, players: [{name: myName, pos: 0, color: '#e94560'}] });
                 return;
             }
-
             const serverPlayers = data.players || [];
             let found = false;
-            
             serverPlayers.forEach((p, idx) => {
                 if(p.name === myName) { myId = idx; found = true; }
-                updatePlayerModel(idx, p);
+                if(!playerModels[idx]) createPlayer(idx, p);
+                const target = boardPos[p.pos].clone().add(new THREE.Vector3(0, 0.5, 0));
+                playerModels[idx].position.lerp(target, 0.1);
             });
-
-            if(!found && serverPlayers.length < 4) {
+            if(!found) {
                 myId = serverPlayers.length;
                 serverPlayers.push({ name: myName, pos: 0, color: '#'+Math.floor(Math.random()*16777215).toString(16) });
                 update(gameRef, { players: serverPlayers });
             }
-
             const activeP = serverPlayers[data.turn];
-            document.getElementById('turnInfo').innerText = `GILIRAN: ${activeP.name.toUpperCase()}`;
-            document.getElementById('turnInfo').style.color = activeP.color;
+            document.getElementById('turnInfo').innerText = `GILIRAN: ${activeP.name}`;
             document.getElementById('rollBtn').disabled = (data.turn !== myId || isMoving);
-            addLog(`Gantian bro, sekarang giliran ${activeP.name}`);
         });
     }
 
-    function updatePlayerModel(id, data) {
-        if(!playerModels[id]) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1, 32), new THREE.MeshStandardMaterial({color: data.color}));
-            
-            const loader = new THREE.TextureLoader();
-            const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`;
-            const face = new THREE.Sprite(new THREE.SpriteMaterial({ map: loader.load(avatarUrl) }));
-            face.position.y = 1.2; face.scale.set(0.8, 0.8, 1);
-            
-            group.add(body, face);
-            scene.add(group);
-            playerModels[id] = group;
-        }
-        // Smooth transition
-        const target = boardPos[data.pos].clone().add(new THREE.Vector3(0, 0.6, 0));
-        playerModels[id].position.lerp(target, 0.1);
+    function createPlayer(id, data) {
+        const group = new THREE.Group();
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(0.4, 32, 32), new THREE.MeshStandardMaterial({color: data.color})));
+        const loader = new THREE.TextureLoader();
+        const face = new THREE.Sprite(new THREE.SpriteMaterial({ map: loader.load(`https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`) }));
+        face.position.y = 0.8; face.scale.set(0.6, 0.6, 1);
+        group.add(face);
+        scene.add(group);
+        playerModels[id] = group;
     }
 
     window.handleRoll = async () => {
         isMoving = true;
         const roll = Math.floor(Math.random() * 6) + 1;
+        addLog(`Dadu: ${roll}`);
         
-        // Animasi Angka Dadu
-        const diceUI = document.getElementById('dice-result');
-        diceUI.innerText = roll;
-        diceUI.style.opacity = "1";
-        setTimeout(() => diceUI.style.opacity = "0", 1000);
-
         const snapshot = await get(gameRef);
         const data = snapshot.val();
-        let currentPos = data.players[myId].pos;
-        let newPos = currentPos + roll;
+        let newPos = data.players[myId].pos + roll;
         if(newPos > 99) newPos = 99;
 
-        addLog(`Kamu dapet angka ${roll}! OTW...`);
-
-        // POV CAMERA MODE
-        targetCamPos.set(playerModels[myId].position.x, 4, playerModels[myId].position.z + 5);
+        targetCamPos.set(playerModels[myId].position.x, 5, playerModels[myId].position.z + 5);
         targetLookAt.copy(playerModels[myId].position);
 
         setTimeout(() => {
-            // Cek Ular / Tangga
-            if(LADDERS[newPos]) {
-                addLog("MANTAP! Naik tangga ke kotak " + LADDERS[newPos]);
-                newPos = LADDERS[newPos];
-            } else if(SNAKES[newPos]) {
-                addLog("WADUH! Digigit ular, turun ke kotak " + SNAKES[newPos]);
-                newPos = SNAKES[newPos];
-            }
-
+            if(LADDERS[newPos]) { addLog("NAIK TANGGA! 🚀"); newPos = LADDERS[newPos]; }
+            else if(SNAKES[newPos]) { addLog("DIGIGIT ULAR! 🐍"); newPos = SNAKES[newPos]; }
+            
             const nextTurn = (data.turn + 1) % data.players.length;
             const updatedPlayers = data.players;
             updatedPlayers[myId].pos = newPos;
-
             update(gameRef, { turn: nextTurn, players: updatedPlayers });
             
-            // RESET CAMERA
             targetCamPos.set(0, 15, 12);
             targetLookAt.set(0, 0, 0);
             isMoving = false;
-        }, 2000);
+        }, 1500);
     };
 
-    function addLog(msg) {
-        const log = document.getElementById('msg');
-        log.innerHTML = `> ${msg}<br>` + log.innerHTML;
-    }
+    function addLog(msg) { document.getElementById('msg').innerHTML = `> ${msg}<br>` + document.getElementById('msg').innerHTML; }
 
     function animate() {
         requestAnimationFrame(animate);
-        if(camera) {
-            camera.position.lerp(targetCamPos, 0.05);
-            const currentLook = new THREE.Vector3();
-            camera.lookAt(targetLookAt);
-        }
+        camera.position.lerp(targetCamPos, 0.05);
+        camera.lookAt(targetLookAt);
         renderer.render(scene, camera);
     }
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 </script>
 </body>
 </html>
