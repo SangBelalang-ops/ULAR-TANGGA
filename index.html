@@ -48,7 +48,9 @@
     let upAvailable = false, bossActive = false;
     const keys = {};
 
-    const player = { x: 100, y: 250, w: 30, h: 20, spd: 5, dmg: 1 };
+    const player = { 
+        x: 100, y: 250, w: 70, h: 40, // Ukuran disesuaiin buat bentuk baru
+        spd: 6, dmg: 1.5 };
     let bullets = [], enemies = [], particles = [], boss = null;
 
     // INPUT
@@ -100,11 +102,57 @@
         if(shake > 0) { ctx.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake *= 0.9; }
 
         // Player Draw
-        ctx.shadowBlur = 15; ctx.shadowColor = '#06b6d4';
-        ctx.fillStyle = '#fff';
+        function drawPlayer(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // Effects: Trail & Glow
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#06b6d4';
+        
+        // --- BODY UTAMA (Stealth Design) ---
+        ctx.fillStyle = '#fff'; // Warna dasar putih neon
         ctx.beginPath();
-        ctx.moveTo(player.x+25, player.y); ctx.lineTo(player.x-10, player.y-15); ctx.lineTo(player.x-10, player.y+15); ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.moveTo(35, 0);   // Moncong Depan
+        ctx.lineTo(-10, -15); // Sayap Kiri Atas
+        ctx.lineTo(-5, -5);   // Body Tengah Kiri
+        ctx.lineTo(-25, -20); // Sayap Belakang Kiri
+        ctx.lineTo(-20, 0);   // Ekor Tengah
+        ctx.lineTo(-25, 20);  // Sayap Belakang Kanan
+        ctx.lineTo(-5, 5);    // Body Tengah Kanan
+        ctx.lineTo(-10, 15);  // Sayap Kanan Atas
+        ctx.closePath();
+        ctx.fill();
+        
+        // --- DETAIL COCKPIT (Kaca Pilot Neon) ---
+        ctx.shadowBlur = 10; ctx.shadowColor = '#fde047'; // Glow Kuning
+        ctx.fillStyle = '#facc15'; 
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.lineTo(5, -6);
+        ctx.lineTo(-5, 0);
+        ctx.lineTo(5, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // --- THRUSTER ENGINE (Mesin Jet Belakang) ---
+        // Efek api mesin kedap-kedip pake Math.sin
+        const thrusterGlow = 10 + Math.sin(time * 0.5) * 5;
+        ctx.shadowBlur = thrusterGlow; ctx.shadowColor = '#d946ef'; // Glow Pink
+        ctx.fillStyle = '#fff'; // Inti api putih
+        
+        // Mesin Kiri
+        ctx.fillRect(-22, -12, 6, 8); 
+        // Mesin Kanan
+        ctx.fillRect(-22, 4, 6, 8);
+        
+        ctx.restore();
+        ctx.shadowBlur = 0; // Reset shadow biar ga bocor ke objek lain
+    }
+
+    // === JANGAN LUPA PANGGIL FUNGSI BARUNYA DI DALEM UPDATE() ===
+    // Cari baris: player.draw();
+    // Ganti jadi: drawPlayer(player.x, player.y);
 
         // Player Move
         if(keys['KeyW']) player.y -= player.spd;
