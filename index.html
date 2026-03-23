@@ -2,269 +2,220 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE MAGA | V.FINAL STABLE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQUAD VIRTUAL PIANO | FLAUST EDITION</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { background: #020617; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; height: 100vh; display: flex; overflow: hidden; }
-        #game-container { display: none; width: 100%; height: 100%; padding: 15px; gap: 15px; }
-        #board-area { flex: 1; position: relative; background: #0f172a; border: 4px solid #1e293b; border-radius: 20px; overflow: hidden; }
-        #board { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); width: 100%; height: 100%; }
-        .cell { border: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; position: relative; }
-        .cell span { font-size: 14px; opacity: 0.15; font-weight: 800; }
-        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap');
         
-        /* VISUAL ASSETS */
-        .ladder-rail { stroke: #78350f; stroke-width: 10; fill: none; stroke-linecap: round; }
-        .ladder-step { stroke: #d97706; stroke-width: 4; }
-        .snake-body { stroke: #991b1b; stroke-width: 16; fill: none; stroke-linecap: round; }
-        .snake-stripes { stroke: #ef4444; stroke-width: 5; fill: none; stroke-linecap: round; stroke-dasharray: 8, 12; }
-        .snake-head { fill: #b91c1c; }
-        .snake-tongue { stroke: #f472b6; stroke-width: 2; fill: none; }
-
-        /* PION FIX */
-        .pawn { 
-            width: 50px; height: 50px; position: absolute; z-index: 50; 
-            transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
-            border-radius: 50%; border: 3px solid #fff; 
-            background-size: cover; background-position: center;
-            background-color: #334155; /* Warna cadangan kalau foto ilang */
-            box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+        body {
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+            color: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
         }
-        .pawn-name { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: #000; font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 900; white-space: nowrap; }
 
-        /* SIDEBAR */
-        #sidebar { width: 280px; display: flex; flex-direction: column; gap: 10px; }
-        .ui-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 15px; padding: 15px; }
-        .dice { width: 80px; height: 80px; background: #fff; border-radius: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #000; font-size: 35px; font-weight: 900; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
-        .rolling { animation: spin 0.1s infinite linear; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .piano-container {
+            display: flex;
+            background: #000;
+            padding: 20px 10px 10px 10px;
+            border-radius: 15px;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.2);
+            position: relative;
+            border-top: 10px solid #1e293b;
+        }
+
+        .key {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        /* Tuts Putih */
+        .white-key {
+            width: 60px;
+            height: 250px;
+            background: linear-gradient(to bottom, #eee 0%, #fff 100%);
+            border: 1px solid #ccc;
+            border-radius: 0 0 5px 5px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 15px;
+            color: #888;
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .white-key:active, .white-key.active {
+            background: linear-gradient(to bottom, #fff 0%, #dadada 100%);
+            transform: translateY(2px);
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Tuts Hitam */
+        .black-key {
+            width: 35px;
+            height: 150px;
+            background: linear-gradient(to bottom, #444 0%, #000 100%);
+            border-radius: 0 0 3px 3px;
+            margin-left: -17.5px;
+            margin-right: -17.5px;
+            z-index: 2;
+            border: 1px solid #222;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 10px;
+            color: #555;
+            font-size: 10px;
+        }
+
+        .black-key:active, .black-key.active {
+            background: linear-gradient(to bottom, #222 0%, #444 100%);
+            transform: translateY(2px);
+        }
+
+        .label-squad {
+            font-size: 10px;
+            color: #f59e0b;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
     </style>
 </head>
 <body>
 
-<div id="setup" class="fixed inset-0 bg-slate-950 z-[100] flex flex-col items-center justify-center p-4">
-    <h1 class="text-5xl font-black text-yellow-500 mb-8 italic italic">SNAKE MAGA</h1>
-    <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm shadow-2xl">
-        <input id="room-id" type="text" placeholder="KODE ROOM" class="w-full bg-slate-950 border border-slate-700 p-4 rounded-xl text-center text-xl font-bold mb-4 uppercase text-yellow-500 outline-none">
-        <div id="hero-select" class="grid grid-cols-3 gap-2 mb-6"></div>
-        <button onclick="joinGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black text-white shadow-lg uppercase">GAS MABAR</button>
+    <div class="controls">
+        <h1 class="text-4xl font-black text-yellow-500 glow-text italic mb-2">SQUAD PIANO <span class="text-white">PRO</span></h1>
+        <p class="text-slate-400 text-sm">Play with your mouse or keys: <span class="text-white font-bold">A S D F G H J K</span></p>
     </div>
-</div>
 
-<div id="game-container">
-    <div id="board-area">
-        <svg id="svg-layer" class="svg-layer"></svg>
-        <div id="board"></div>
-    </div>
-    <div id="sidebar">
-        <div class="ui-card text-center">
-            <p id="turn-info" class="text-yellow-500 font-bold text-xs mb-3 uppercase tracking-widest">SINKRONISASI...</p>
-            <div id="dice-btn" class="dice" onclick="rollDice()">1</div>
+    <div class="piano-container" id="piano">
         </div>
-        <div class="ui-card flex-1 flex flex-col overflow-hidden">
-            <div id="chat-list" class="flex-1 overflow-y-auto text-xs space-y-1 mb-2"></div>
-            <input id="chat-in" type="text" placeholder="Ketik bacotan..." class="w-full bg-slate-950 p-2 rounded-lg text-xs outline-none border border-slate-800" onkeypress="if(event.key==='Enter') sendChat()">
-        </div>
+
+    <div class="mt-10 p-4 bg-slate-900/50 rounded-2xl border border-slate-800 text-center">
+        <p class="text-xs text-slate-500 uppercase font-bold tracking-widest">Powered by Flaust Audio Engine</p>
     </div>
-</div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyB1iv6fdSjMcm-i4CETVlNZuS9CB6VulyM",
-        authDomain: "ulartanggasquad.firebaseapp.com",
-        databaseURL: "https://ulartanggasquad-default-rtdb.asia-southeast1.firebasedatabase.app", 
-        projectId: "ulartanggasquad",
-        storageBucket: "ulartanggasquad.firebasestorage.app",
-        messagingSenderId: "492517449717",
-        appId: "1:492517449717:web:becd2a0771a1c3d8a0cabc"
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Mapping Tuts: Note, Type (white/black), Keyboard Key, Squad Label
+    const keys = [
+        { note: "C4", type: "white", char: "A", squad: "Lilas" },
+        { note: "C#4", type: "black", char: "W", squad: "" },
+        { note: "D4", type: "white", char: "S", squad: "Albert" },
+        { note: "D#4", type: "black", char: "E", squad: "" },
+        { note: "E4", type: "white", char: "D", squad: "Tegar" },
+        { note: "F4", type: "white", char: "F", squad: "Meggy" },
+        { note: "F#4", type: "black", char: "T", squad: "" },
+        { note: "G4", type: "white", char: "G", squad: "Anjas" },
+        { note: "G#4", type: "black", char: "Y", squad: "" },
+        { note: "A4", type: "white", char: "H", squad: "Piter" },
+        { note: "A#4", type: "black", char: "U", squad: "" },
+        { note: "B4", type: "white", char: "J", squad: "Bernad" },
+        { note: "C5", type: "white", char: "K", squad: "Maga" }
+    ];
+
+    const frequencies = {
+        "C4": 261.63, "C#4": 277.18, "D4": 293.66, "D#4": 311.13, 
+        "E4": 329.63, "F4": 349.23, "F#4": 369.99, "G4": 392.00, 
+        "G#4": 415.30, "A4": 440.00, "A#4": 466.16, "B4": 493.88, "C5": 523.25
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const squad = ["Lilas", "Albert", "Tegar", "Meggy", "Anjas", "Piter"];
-    const jumps = { 2:38, 7:14, 8:31, 15:26, 21:42, 36:44, 51:67, 71:91, 78:98, 16:6, 46:25, 49:11, 62:19, 64:60, 74:53, 89:68, 95:75, 99:80 };
-    
-    let user = '', room = '', isMoving = false;
+    const pianoElement = document.getElementById('piano');
+    const activeOscillators = {};
 
-    // Build Selector
-    const hSelect = document.getElementById('hero-select');
-    squad.forEach(s => {
-        const btn = document.createElement('button');
-        btn.innerText = s;
-        btn.className = "bg-slate-800 p-2 rounded-lg border-2 border-transparent text-[10px] font-bold uppercase";
-        btn.onclick = () => {
-            document.querySelectorAll('#hero-select button').forEach(b => b.classList.remove('border-yellow-500', 'bg-slate-700'));
-            btn.classList.add('border-yellow-500', 'bg-slate-700');
-            user = s;
-        };
-        hSelect.appendChild(btn);
+    // Generate Tuts
+    keys.forEach(key => {
+        const div = document.createElement('div');
+        div.className = `key ${key.type}-key`;
+        div.id = `key-${key.note}`;
+        div.innerHTML = `
+            <span>${key.char}</span>
+            ${key.squad ? `<div class="label-squad">${key.squad}</div>` : ''}
+        `;
+        
+        // Event Mouse
+        div.onmousedown = () => playNote(key.note);
+        div.onmouseup = () => stopNote(key.note);
+        div.onmouseleave = () => stopNote(key.note);
+        
+        // Support Touch
+        div.ontouchstart = (e) => { e.preventDefault(); playNote(key.note); };
+        div.ontouchend = () => stopNote(key.note);
+
+        pianoElement.appendChild(div);
     });
 
-    async function joinGame() {
-        room = document.getElementById('room-id').value.toUpperCase() || 'MAGA';
-        if(!user) return alert("Pilih Karakter Dulu!");
+    function playNote(note) {
+        if (activeOscillators[note]) return;
+
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        osc.type = 'triangle'; // Suara lebih lembut kayak piano elektrik
+        osc.frequency.setValueAtTime(frequencies[note], audioCtx.currentTime);
+
+        gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start();
+        activeOscillators[note] = { osc, gainNode };
         
-        const ref = db.ref('rooms/'+room);
-        const snap = await ref.get();
-        let data = snap.val();
-
-        if(!data) {
-            await ref.set({
-                players: [{name:user, pos:1, img: `${user.toLowerCase()}.png`}],
-                turn: 0, last: 1, moving: false
-            });
-        } else {
-            let pList = data.players || [];
-            if(!pList.find(p => p.name === user)) {
-                pList.push({name:user, pos:1, img: `${user.toLowerCase()}.png`});
-                await ref.update({players: pList, moving: false});
-            } else {
-                await ref.update({moving: false});
-            }
+        document.getElementById(`key-${note}`).classList.add('active');
+        
+        // Resume AudioContext (Security browser)
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
-        startApp();
     }
 
-    function startApp() {
-        document.getElementById('setup').style.display = 'none';
-        document.getElementById('game-container').style.display = 'flex';
-        initBoard(); 
-        listenGame();
-    }
-
-    function initBoard() {
-        const b = document.getElementById('board'); b.innerHTML = '';
-        for (let r=9; r>=0; r--) {
-            for (let c=0; c<10; c++) {
-                let n = (r%2===0) ? (r*10+c+1) : (r*10+(10-c));
-                const cell = document.createElement('div');
-                cell.className = 'cell'; cell.id = `cell-${n}`;
-                cell.innerHTML = `<span>${n}</span>`;
-                b.appendChild(cell);
-            }
+    function stopNote(note) {
+        if (activeOscillators[note]) {
+            const { osc, gainNode } = activeOscillators[note];
+            gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+            setTimeout(() => {
+                osc.stop();
+                delete activeOscillators[note];
+            }, 100);
+            document.getElementById(`key-${note}`).classList.remove('active');
         }
-        setTimeout(drawAssets, 800);
     }
 
-    function drawAssets() {
-        const svg = document.getElementById('svg-layer'); svg.innerHTML = '';
-        const bRect = document.getElementById('board-area').getBoundingClientRect();
-        Object.keys(jumps).forEach(start => {
-            const s = parseInt(start); const e = jumps[s];
-            const sEl = document.getElementById(`cell-${s}`).getBoundingClientRect();
-            const eEl = document.getElementById(`cell-${e}`).getBoundingClientRect();
-            const x1 = sEl.left - bRect.left + sEl.width/2;
-            const y1 = sEl.top - bRect.top + sEl.height/2;
-            const x2 = eEl.left - bRect.left + eEl.width/2;
-            const y2 = eEl.top - bRect.top + eEl.height/2;
-            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    // Keyboard Listeners
+    window.onkeydown = (e) => {
+        const keyData = keys.find(k => k.char === e.key.toUpperCase());
+        if (keyData) playNote(keyData.note);
+    };
 
-            if (e > s) {
-                const rail = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                rail.setAttribute("d", `M${x1-10},${y1} L${x2-10},${y2} M${x1+10},${y1} L${x2+10},${y2}`);
-                rail.setAttribute("class", "ladder-rail"); g.appendChild(rail);
-                for(let i=1; i<5; i++) {
-                    const lx = x1 + (x2-x1)*(i/5); const ly = y1 + (y2-y1)*(i/5);
-                    const stp = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    stp.setAttribute("x1", lx-15); stp.setAttribute("y1", ly); stp.setAttribute("x2", lx+15); stp.setAttribute("y2", ly);
-                    stp.setAttribute("class", "ladder-step"); g.appendChild(stp);
-                }
-            } else {
-                const midX = (x1 + x2) / 2 + (x1 > x2 ? 50 : -50); const midY = (y1 + y2) / 2;
-                const d = `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`;
-                const body = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                body.setAttribute("d", d); body.setAttribute("class", "snake-body"); g.appendChild(body);
-                const stripes = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                stripes.setAttribute("d", d); stripes.setAttribute("class", "snake-stripes"); g.appendChild(stripes);
-                const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-                head.setAttribute("cx", x1); head.setAttribute("cy", y1); head.setAttribute("rx", 12); head.setAttribute("ry", 15);
-                head.setAttribute("class", "snake-head");
-                const ang = Math.atan2(y1-y2, x1-x2) * 180 / Math.PI;
-                head.setAttribute("transform", `rotate(${ang}, ${x1}, ${y1})`); g.appendChild(head);
-                const eye = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                eye.setAttribute("cx", x1); eye.setAttribute("cy", y1); eye.setAttribute("r", 2); eye.setAttribute("fill", "yellow"); g.appendChild(eye);
-                const tongue = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                tongue.setAttribute("d", `M${x1},${y1-15} L${x1},${y1-25} M${x1},${y1-25} L${x1-4},${y1-30} M${x1},${y1-25} L${x1+4},${y1-30}`);
-                tongue.setAttribute("class", "snake-tongue"); tongue.setAttribute("transform", `rotate(${ang}, ${x1}, ${y1})`); g.appendChild(tongue);
-            }
-            svg.appendChild(g);
-        });
-    }
-
-    function listenGame() {
-        window.onresize = drawAssets;
-        db.ref('rooms/'+room).on('value', snap => {
-            const data = snap.val(); if(!data) return;
-            const pActive = data.players[data.turn];
-            document.getElementById('turn-info').innerText = pActive.name === user ? "🔥 GILIRAN LO!" : `${pActive.name.toUpperCase()} JALAN`;
-            document.getElementById('dice-btn').innerText = data.last;
-            isMoving = data.moving;
-
-            document.querySelectorAll('.pawn').forEach(p => p.remove());
-            data.players.forEach((p, i) => {
-                const cell = document.getElementById(`cell-${p.pos}`);
-                if(!cell) return;
-                const rect = cell.getBoundingClientRect();
-                const br = document.getElementById('board-area').getBoundingClientRect();
-                const div = document.createElement('div');
-                div.className = 'pawn';
-                // FIX: Foto pemain
-                div.style.backgroundImage = `url('${p.img}')`;
-                div.style.left = `${(rect.left - br.left) + (i*4)}px`;
-                div.style.top = `${(rect.top - br.top) + (i*4)}px`;
-                div.innerHTML = `<div class="pawn-name">${p.name}</div>`;
-                document.getElementById('board-area').appendChild(div);
-            });
-        });
-        db.ref('chats/'+room).limitToLast(12).on('value', s => {
-            const b = document.getElementById('chat-list'); b.innerHTML = '';
-            s.forEach(c => { b.innerHTML += `<div><b class="text-yellow-500">${c.val().u}:</b> ${c.val().t}</div>`; });
-            b.scrollTop = b.scrollHeight;
-        });
-    }
-
-    async function rollDice() {
-        const snap = await db.ref('rooms/'+room).get();
-        const data = snap.val();
-        if(!data || isMoving || data.players[data.turn].name !== user) return;
-
-        const val = Math.floor(Math.random()*6)+1;
-        document.getElementById('dice-btn').classList.add('rolling');
-        await db.ref('rooms/'+room).update({moving: true, last: val});
-
-        setTimeout(async () => {
-            document.getElementById('dice-btn').classList.remove('rolling');
-            let players = [...data.players];
-            let pIndex = data.turn;
-            let startPos = players[pIndex].pos;
-            let targetPos = Math.min(startPos + val, 100);
-
-            for(let i = startPos + 1; i <= targetPos; i++) {
-                players[pIndex].pos = i;
-                await db.ref('rooms/'+room+'/players').set(players);
-                await new Promise(r => setTimeout(r, 200));
-            }
-
-            if(jumps[players[pIndex].pos]) {
-                await new Promise(r => setTimeout(r, 600));
-                players[pIndex].pos = jumps[players[pIndex].pos];
-                await db.ref('rooms/'+room+'/players').set(players);
-            }
-
-            if(players[pIndex].pos === 100) { confetti(); alert("MENANG!"); }
-            await db.ref('rooms/'+room).update({turn: (pIndex + 1) % players.length, moving: false});
-        }, 1000);
-    }
-
-    function sendChat() {
-        const i = document.getElementById('chat-in'); if(!i.value) return;
-        db.ref('chats/'+room).push({u:user, t:i.value}); i.value = '';
-    }
+    window.onkeyup = (e) => {
+        const keyData = keys.find(k => k.char === e.key.toUpperCase());
+        if (keyData) stopNote(keyData.note);
+    };
 </script>
 </body>
 </html>
