@@ -3,197 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQUAD CHICKEN WARFARE | METAL SLUG EDITION</title>
+    <title>SQUAD CHICKEN: TACTICAL WARFARE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@800&display=swap');
-        body { 
-            margin: 0; overflow: hidden; 
-            background: linear-gradient(to bottom, #020617, #0f172a);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;
-        }
-        #gameCanvas {
-            background: #1e293b;
-            border-bottom: 8px solid #ef4444;
-            border-radius: 12px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-        }
-        .ui-panel { position: absolute; top: 20px; text-align: center; pointer-events: none; width: 100%; display: flex; justify-content: space-around; }
-        .stat-box { background: rgba(15, 23, 42, 0.8); padding: 10px 20px; border-radius: 8px; border: 1px solid #334155; }
-        .hp-bar-bg { width: 100px; height: 10px; background: #475569; border-radius: 5px; overflow: hidden; margin-top: 5px; }
-        .hp-bar-fill { height: 100%; background: #22c55e; transition: width 0.2s; }
+        body { margin: 0; overflow: hidden; background: #020617; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { background: #0f172a; border: 4px solid #334155; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .hud { position: absolute; top: 20px; width: 760px; display: flex; justify-content: space-between; pointer-events: none; }
+        .stat { background: rgba(15, 23, 42, 0.9); padding: 10px 15px; border-radius: 6px; border: 1px solid #475569; }
     </style>
 </head>
 <body>
 
-    <div class="ui-panel">
-        <div class="stat-box text-left">
-            <p class="text-[10px] text-slate-500 font-bold uppercase">Lives</p>
-            <p id="lives" class="text-2xl text-white font-black">❤️❤️❤️</p>
-            <div class="hp-bar-bg"><div id="hp-bar" class="hp-bar-fill"></div></div>
+    <div class="hud">
+        <div class="stat">
+            <p class="text-[10px] text-slate-500 uppercase">Status</p>
+            <p id="lives" class="text-xl">❤️❤️❤️</p>
+            <div class="w-24 h-2 bg-slate-700 mt-1 rounded-full overflow-hidden"><div id="hp" class="h-full bg-green-500 transition-all"></div></div>
         </div>
-        <div class="stat-box">
-            <h1 class="text-3xl font-black text-white italic tracking-tighter">CHICKEN <span class="text-red-500">WAR</span></h1>
-            <p class="text-yellow-500 text-xs font-bold uppercase tracking-widest">Score: <span id="score">0</span></p>
+        <div class="stat text-center">
+            <p id="wave-display" class="text-yellow-500 text-xl font-black italic">WAVE 1</p>
+            <p id="score" class="text-white text-xs">SCORE: 0</p>
         </div>
-        <div class="stat-box text-right">
-            <p class="text-[10px] text-slate-500 font-bold uppercase">Weapon</p>
-            <p id="weapon" class="text-xs text-white font-black uppercase">Normal Egg</p>
+        <div class="stat text-right">
+            <p class="text-[10px] text-slate-500 uppercase">Current Weapon</p>
+            <p id="weapon-name" class="text-sm text-red-500 font-black italic uppercase">Pistol Egg</p>
         </div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="300"></canvas>
-
-    <div class="mt-6 text-slate-600 text-[10px] font-bold uppercase tracking-widest animate-pulse">
-        [Space/Tap] Jump | [F] Shoot
-    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const livesEl = document.getElementById('lives');
-    const hpBarEl = document.getElementById('hp-bar');
-    const scoreEl = document.getElementById('score');
-    const weaponEl = document.getElementById('weapon');
 
-    let score = 0;
-    let gameActive = true;
-    let gravity = 0.7;
-    let groundY = canvas.height - 50;
-    
-    // SISTEM NYAWA & DARAH
-    let lives = 3;
-    let maxHp = 100;
-    let currentHp = maxHp;
+    // Game State
+    let score = 0, wave = 1, gameActive = true, lives = 3, hp = 100;
+    const gravity = 0.8, friction = 0.8;
+    const keys = {};
 
-    // AYAM WARRIOR
-    const chicken = {
-        x: 80, y: groundY - 40, width: 40, height: 40, dy: 0, jumpForce: 13, grounded: false,
-        hasWeapon: false, weaponTimer: 0,
+    // Chicken (Player)
+    const player = {
+        x: 100, y: 300, w: 40, h: 40, dx: 0, dy: 0, 
+        speed: 5, jump: 15, grounded: false,
+        weapon: 'NORMAL', weaponTimer: 0,
         draw() {
-            // Badan
-            ctx.fillStyle = this.hasWeapon ? "#ef4444" : "#fbbf24"; 
-            ctx.beginPath(); ctx.roundRect(this.x, this.y, this.width, this.height, 8); ctx.fill();
-            // Jengger & Paruh
-            ctx.fillStyle = "#ff0000"; ctx.fillRect(this.x + 25, this.y - 6, 12, 12);
-            ctx.fillStyle = "#000"; ctx.fillRect(this.x + 30, this.y + 10, 5, 5);
-            ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.moveTo(this.x + 40, this.y + 15); ctx.lineTo(this.x + 50, this.y + 20); ctx.lineTo(this.x + 40, this.y + 25); ctx.fill();
-            // Senjata visual
-            if(this.hasWeapon){ ctx.fillStyle = "#475569"; ctx.fillRect(this.x + 10, this.y + 20, 30, 10); }
+            ctx.fillStyle = this.weapon === 'NORMAL' ? "#fbbf24" : "#ef4444";
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.fillStyle = "#ff0000"; ctx.fillRect(this.x + 25, this.y - 5, 10, 10); // Jengger
         }
     };
 
-    // PELURU SQUAD (Telur Peledak)
-    const bullets = [];
-    class Bullet {
-        constructor(x, y, isPower) { this.x = x; this.y = y; this.width = 15; this.height = 10; this.speed = 10; this.isPower = isPower; this.active = true; }
-        draw() { ctx.fillStyle = this.isPower ? "#ef4444" : "#fff"; ctx.beginPath(); ctx.ellipse(this.x, this.y, this.width/2, this.height/2, 0, 0, Math.PI*2); ctx.fill(); }
-        update() { this.x += this.speed; if(this.x > canvas.width) this.active = false; }
-    }
+    const bullets = [], enemies = [], items = [], eBullets = [];
+    const weaponTypes = ['LASER', 'GRENADE', 'SPREAD'];
 
-    // MUSUH (Koki Jahat)
-    const enemies = [];
-    class Enemy {
-        constructor() { this.x = canvas.width; this.y = groundY - 50; this.width = 40; this.height = 50; this.speed = 3; this.fireTimer = 0; this.active = true; }
-        draw() { ctx.fillStyle = "#94a3b8"; ctx.fillRect(this.x, this.y, this.width, this.height); ctx.fillStyle = "#fff"; ctx.fillRect(this.x, this.y, this.width, 15); ctx.fillStyle = "#000"; ctx.fillRect(this.x+10, this.y+20, 5, 5);ctx.fillRect(this.x+25, this.y+20, 5, 5); }
-        update() { this.x -= this.speed; if(this.x + this.width < 0) this.active = false; this.fireTimer++; if(this.fireTimer > 100){ this.shoot(); this.fireTimer = 0; } }
-        shoot() { enemyBullets.push(new EnemyBullet(this.x, this.y + 20)); }
-    }
+    // Handle Input
+    window.onkeydown = (e) => keys[e.code] = true;
+    window.onkeyup = (e) => { 
+        keys[e.code] = false; 
+        if(e.code === 'KeyF' && gameActive) shoot();
+        if(e.code === 'KeyF' && !gameActive) location.reload();
+    };
 
-    // PELURU MUSUH
-    const enemyBullets = [];
-    class EnemyBullet {
-        constructor(x, y) { this.x = x; this.y = y; this.width = 10; this.height = 5; this.speed = 5; this.active = true; }
-        draw() { ctx.fillStyle = "#facc15"; ctx.fillRect(this.x, this.y, this.width, this.height); }
-        update() { this.x -= this.speed; if(this.x + this.width < 0) this.active = false; }
-    }
-
-    // ITEM DROP (Metal Slug Style)
-    const items = [];
-    class Item {
-        constructor() { this.x = canvas.width; this.y = groundY - 100; this.width = 30; this.height = 30; this.speed = 4; this.active = true; }
-        draw() { 
-            ctx.fillStyle = "#fbbf24"; ctx.fillRect(this.x, this.y, this.width, this.height); 
-            ctx.fillStyle = "#000"; ctx.font = "bold 20px Arial"; ctx.fillText("H", this.x+8, this.y+22); // 'H' for Heavy Machine Egg
-            ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(this.x, this.y, this.width, this.height);
+    function shoot() {
+        const bSpeed = 12;
+        if(player.weapon === 'NORMAL') {
+            bullets.push({x: player.x + 40, y: player.y + 20, vx: bSpeed, vy: 0, type: 'NORMAL', r: 5});
+        } else if(player.weapon === 'LASER') {
+            bullets.push({x: player.x + 40, y: player.y + 18, vx: 20, vy: 0, type: 'LASER', r: 3});
+        } else if(player.weapon === 'GRENADE') {
+            bullets.push({x: player.x + 40, y: player.y + 10, vx: 8, vy: -8, type: 'GRENADE', r: 8});
+        } else if(player.weapon === 'SPREAD') {
+            bullets.push({x: player.x + 40, y: player.y + 20, vx: bSpeed, vy: -2, type: 'NORMAL', r: 5});
+            bullets.push({x: player.x + 40, y: player.y + 20, vx: bSpeed, vy: 0, type: 'NORMAL', r: 5});
+            bullets.push({x: player.x + 40, y: player.y + 20, vx: bSpeed, vy: 2, type: 'NORMAL', r: 5});
         }
-        update() { this.x -= this.speed; if(this.x + this.width < 0) this.active = false; }
     }
 
-    let spawnTimer = 0;
+    function spawnWave() {
+        let count = 3 + wave;
+        for(let i=0; i<count; i++) {
+            enemies.push({
+                x: canvas.width + (i * 200), y: 310, w: 40, h: 40, 
+                hp: 20 + (wave * 10), speed: 2 + (wave * 0.2), 
+                lastShot: 0
+            });
+        }
+        if(Math.random() > 0.5) items.push({x: canvas.width + 100, y: 200, w: 30, h: 30, type: weaponTypes[Math.floor(Math.random()*3)]});
+    }
+
     function update() {
-        if (!gameActive) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Ground
-        ctx.fillStyle = "#334155"; ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+        if(!gameActive) return;
 
-        // Ayam Gravitasi
-        if (!chicken.grounded) { chicken.dy += gravity; chicken.y += chicken.dy; }
-        if (chicken.y + chicken.height > groundY) { chicken.y = groundY - chicken.height; chicken.dy = 0; chicken.grounded = true; }
-        
+        // Player Movement WASD
+        if(keys['KeyA']) player.dx = -player.speed;
+        if(keys['KeyD']) player.dx = player.speed;
+        if(keys['Space'] && player.grounded || keys['KeyW'] && player.grounded) {
+            player.dy = -player.jump;
+            player.grounded = false;
+        }
+
+        player.y += player.dy;
+        player.x += player.dx;
+        player.dy += gravity;
+        player.dx *= friction;
+
+        // Constraints
+        if(player.y > 310) { player.y = 310; player.dy = 0; player.grounded = true; }
+        if(player.x < 0) player.x = 0;
+        if(player.x > canvas.width - 40) player.x = canvas.width - 40;
+
         // Weapon Timer
-        if(chicken.hasWeapon){ chicken.weaponTimer--; if(chicken.weaponTimer <= 0){ chicken.hasWeapon = false; weaponEl.innerText = "Normal Egg"; } }
-        chicken.draw();
+        if(player.weaponTimer > 0) {
+            player.weaponTimer--;
+            if(player.weaponTimer <= 0) {
+                player.weapon = 'NORMAL';
+                document.getElementById('weapon-name').innerText = "Pistol Egg";
+            }
+        }
 
-        // Spawn Logic
-        spawnTimer++;
-        if (spawnTimer > 150) { if(Math.random() < 0.7) enemies.push(new Enemy()); spawnTimer = 0; }
-        if (Math.random() < 0.005) items.push(new Item()); // Jarang muncul item
+        // Wave Logic
+        if(enemies.length === 0) { wave++; spawnWave(); document.getElementById('wave-display').innerText = `WAVE ${wave}`; }
 
-        // Update All Entities
-        [bullets, enemies, enemyBullets, items].forEach(group => {
-            for(let i = group.length - 1; i >= 0; i--){
-                group[i].update(); group[i].draw();
-                if(!group[i].active) group.splice(i, 1);
+        ctx.clearRect(0,0,800,400);
+        ctx.fillStyle = "#1e293b"; ctx.fillRect(0, 350, 800, 50); // Floor
+
+        player.draw();
+
+        // Update Bullets
+        bullets.forEach((b, i) => {
+            b.x += b.vx; b.y += b.vy;
+            if(b.type === 'GRENADE') b.vy += 0.4;
+            ctx.fillStyle = b.type === 'LASER' ? "#00f2ff" : "#fff";
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+            if(b.x > 800 || b.y > 350) bullets.splice(i, 1);
+        });
+
+        // Update Enemies
+        enemies.forEach((e, i) => {
+            e.x -= e.speed;
+            ctx.fillStyle = "#94a3b8"; ctx.fillRect(e.x, e.y, e.w, e.h);
+            
+            // Shooting logic
+            if(Date.now() - e.lastShot > 2000) {
+                eBullets.push({x: e.x, y: e.y + 20, vx: -5});
+                e.lastShot = Date.now();
+            }
+
+            // Collision with bullet
+            bullets.forEach((b, bi) => {
+                if(b.x > e.x && b.x < e.x + e.w && b.y > e.y && b.y < e.y + e.h) {
+                    e.hp -= (b.type === 'LASER' ? 10 : 20);
+                    if(b.type !== 'LASER') bullets.splice(bi, 1);
+                    if(e.hp <= 0) { enemies.splice(i, 1); score += 100; document.getElementById('score').innerText = `SCORE: ${score}`; }
+                }
+            });
+
+            if(e.x < player.x + player.w && e.x + e.w > player.x && e.y < player.y + player.h && e.y + e.h > player.y) {
+                takeDamage(1);
             }
         });
 
-        // COLLISION LOGIC
-        // Peluru Squad vs Musuh
-        bullets.forEach(b => { enemies.forEach(e => { if(checkCol(b,e)){ b.active = false; e.active = false; score += 20; scoreEl.innerText = score; } }); });
-        // Peluru Musuh vs Ayam
-        enemyBullets.forEach(eb => { if(checkCol(eb, chicken)){ eb.active = false; takeDamage(20); } });
-        // Musuh (Badan) vs Ayam
-        enemies.forEach(e => { if(checkCol(e, chicken)){ e.active = false; takeDamage(30); } });
-        // Item vs Ayam
-        items.forEach(it => { if(checkCol(it, chicken)){ it.active = false; chicken.hasWeapon = true; chicken.weaponTimer = 500; weaponEl.innerText = "Heavy Machine Egg"; } });
+        // Enemy Bullets
+        eBullets.forEach((eb, i) => {
+            eb.x += eb.vx;
+            ctx.fillStyle = "#facc15"; ctx.fillRect(eb.x, eb.y, 8, 4);
+            if(eb.x < player.x + player.w && eb.x + 8 > player.x && eb.y < player.y + player.h && eb.y + 4 > player.y) {
+                eBullets.splice(i, 1); takeDamage(20);
+            }
+        });
+
+        // Items
+        items.forEach((it, i) => {
+            it.x -= 2;
+            ctx.fillStyle = "#f59e0b"; ctx.fillRect(it.x, it.y, it.w, it.h);
+            ctx.fillStyle = "#fff"; ctx.font = "12px Arial"; ctx.fillText(it.type[0], it.x + 10, it.y + 20);
+            if(it.x < player.x + player.w && it.x + it.w > player.x && it.y < player.y + player.h && it.y + it.h > player.y) {
+                player.weapon = it.type;
+                player.weaponTimer = 300;
+                document.getElementById('weapon-name').innerText = it.type;
+                items.splice(i, 1);
+            }
+        });
 
         requestAnimationFrame(update);
     }
 
-    function takeDamage(dmg) {
-        currentHp -= dmg;
-        if(currentHp <= 0){
-            lives--;
-            updateLivesUI();
-            if(lives <= 0){ gameOver(); } else { currentHp = maxHp; }
+    function takeDamage(amt) {
+        hp -= amt;
+        document.getElementById('hp').style.width = hp + "%";
+        if(hp <= 0) {
+            lives--; hp = 100;
+            let heart = ""; for(let i=0; i<lives; i++) heart += "❤️";
+            document.getElementById('lives').innerText = heart;
+            if(lives <= 0) gameOver();
         }
-        hpBarEl.style.width = `${(currentHp / maxHp) * 100}%`;
     }
-
-    function updateLivesUI() { let l = ""; for(let i=0; i<lives; i++) l += "❤️"; livesEl.innerText = l || "DEAD"; }
-
-    function shoot() {
-        if(!gameActive) return;
-        bullets.push(new Bullet(chicken.x + chicken.width, chicken.y + 20, chicken.hasWeapon));
-    }
-
-    function checkCol(r1, r2) { return r1.x < r2.x + r2.width && r1.x + r1.width > r2.x && r1.y < r2.y + r2.height && r1.y + r1.height > r2.y; }
 
     function gameOver() {
         gameActive = false;
-        ctx.fillStyle = "rgba(15, 23, 42, 0.9)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ef4444"; ctx.textAlign = "center"; ctx.font = "bold 50px Plus Jakarta Sans"; ctx.fillText(" MISSION FAILED ", canvas.width / 2, canvas.height / 2);
-        ctx.fillStyle = "#fff"; ctx.font = "bold 15px Plus Jakarta Sans"; ctx.fillText("Press F to Restart", canvas.width / 2, canvas.height / 2 + 50);
+        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0,0,800,400);
+        ctx.fillStyle = "red"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
+        ctx.fillText("MISSION FAILED", 400, 200);
+        ctx.fillStyle = "white"; ctx.font = "20px Arial";
+        ctx.fillText("Press F to Restart", 400, 250);
     }
 
-    // Input Control
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && gameActive && chicken.grounded) { chicken.dy = -chicken.jumpForce; chicken.grounded = false; }
-        if (e.code === 'KeyF') { if(gameActive) { shoot(); } else { location.reload(); } }
-    });
-
+    spawnWave();
     update();
 </script>
 </body>
