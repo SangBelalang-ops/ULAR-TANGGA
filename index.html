@@ -1,195 +1,60 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>SQUAD HORROR V5 - MOUSE CONTROL</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, black 150%); pointer-events: none; z-index: 5; }
-        #ui { position: absolute; bottom: 30px; left: 30px; color: #800; font-size: 16px; z-index: 10; letter-spacing: 1px; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; }
-        #msg { position: absolute; top: 30%; width: 100%; text-align: center; color: #fff; font-size: 18px; z-index: 10; }
-        #jumpscare { position: absolute; inset: 0; background: #000; display: none; z-index: 1000; align-items: center; justify-content: center; }
-        .scare-text { color: #f00; font-size: 100px; font-weight: 900; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(5px,5px); } 50% { transform: translate(-5px,-5px); } 100% { transform: translate(0,0); } }
-    </style>
-</head>
-<body>
-
-<div id="vignette"></div>
-<div id="crosshair"></div>
-<div id="ui">
-    SENTER: <span id="st">MATI</span> (PENCET 'E')<br>
-    POWER: <span id="percent">100</span>%<br>
-    OBJECTIVE: <span id="nc">0</span>/5 DATA
-</div>
-<div id="msg">KLIK UNTUK AKTIFKAN MOUSE & START...</div>
-
-<div id="jumpscare"><div class="scare-text">MATI KAU!</div></div>
-
-<script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
-
-<script type="module">
-    import * as THREE from 'three';
-
-    let scene, camera, renderer, flashLight, player, clock, audioCtx;
-    let keys = {}, battery = 100, isDead = false, notesFound = 0;
-    let enemy, enemyActive = false, items = [], lightOn = false;
-
-    // --- MOUSE CONTROL SETUP ---
-    const pitch = new THREE.Object3D();
-    const yaw = new THREE.Object3D();
-
-    window.onclick = () => {
-        if(!isPlaying) {
-            document.body.requestPointerLock();
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            init();
-        } else {
-            document.body.requestPointerLock();
-        }
-    };
-
-    document.addEventListener('mousemove', (e) => {
-        if (document.pointerLockElement === document.body && !isDead) {
-            yaw.rotation.y -= e.movementX * 0.002;
-            pitch.rotation.x -= e.movementY * 0.002;
-            pitch.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.rotation.x));
-        }
+// 1. MODIFIKASI: Bikin balok biru lebih kelihatan (Melayang & Mutar)
+function spawnData() {
+    const dataGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5); // Lebih gede dikit biar kelihatan
+    const dataMat = new THREE.MeshStandardMaterial({ 
+        color: 0x00d4ff, 
+        emissive: 0x00d4ff, 
+        emissiveIntensity: 2 
     });
 
-    let isPlaying = false;
-    function init() {
-        isPlaying = true;
-        document.getElementById('msg').style.display = 'none';
-        
-        scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 15);
-
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        
-        player = new THREE.Group();
-        player.position.set(0, 1.6, 25);
-        scene.add(player);
-        
-        player.add(yaw);
-        yaw.add(pitch);
-        pitch.add(camera);
-
-        // SENTER (Ditempel di kamera)
-        flashLight = new THREE.SpotLight(0xffffff, 0, 20, Math.PI/6, 0.5, 1);
-        pitch.add(flashLight);
-        flashLight.position.set(0, 0, 0);
-        flashLight.target.position.set(0, 0, -1);
-        pitch.add(flashLight.target);
-
-        // AMBIENT LIGHT (Biar gak gelap gulita banget)
-        const amb = new THREE.AmbientLight(0xffffff, 0.05); 
-        scene.add(amb);
-
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        clock = new THREE.Clock();
-        createMaze();
-        spawnEnemy();
-        spawnData();
-        animate();
+    for(let i=0; i<5; i++) {
+        const pad = new THREE.Mesh(dataGeo, dataMat);
+        // Taruh di posisi random tapi tingginya pas sedada (1.2 meter)
+        pad.position.set(Math.random()*40-20, 1.2, Math.random()*40-20);
+        scene.add(pad);
+        items.push(pad);
     }
+}
 
-    function createMaze() {
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
-        floor.rotation.x = -Math.PI/2;
-        scene.add(floor);
+// 2. MODIFIKASI: Logika deteksi di dalam animate() atau handleUpdate()
+function handleItemPickup() {
+    items.forEach((pad, i) => {
+        // Animasi muter biar estetik
+        pad.rotation.y += 0.05;
+        pad.rotation.x += 0.02;
 
-        for(let i=0; i<50; i++) {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 0.5), new THREE.MeshStandardMaterial({color: 0x111111}));
-            wall.position.set(Math.random()*40-20, 2.5, Math.random()*40-20);
-            if(Math.random() > 0.5) wall.rotation.y = Math.PI/2;
-            scene.add(wall);
-        }
-    }
-
-    function spawnEnemy() {
-        enemy = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshBasicMaterial({color: 0x000000}));
-        enemy.position.set(-20, 1.5, -20);
-        scene.add(enemy);
-        setTimeout(() => { enemyActive = true; }, 5000);
-    }
-
-    function spawnData() {
-        for(let i=0; i<5; i++) {
-            const pad = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), new THREE.MeshBasicMaterial({color: 0x00d4ff}));
-            pad.position.set(Math.random()*30-15, 0.1, Math.random()*30-15);
-            scene.add(pad);
-            items.push(pad);
-        }
-    }
-
-    window.onkeydown = (e) => {
-        keys[e.code] = true;
-        // Tombol E Nyalain/Matiin Senter
-        if(e.code === 'KeyE' && !isDead && battery > 0) {
-            lightOn = !lightOn;
-            document.getElementById('st').innerText = lightOn ? "NYALA" : "MATI";
-            document.getElementById('st').style.color = lightOn ? "#0f0" : "#800";
-        }
-    };
-    window.onkeyup = (e) => keys[e.code] = false;
-
-    function handleUpdate() {
-        if(isDead) return;
-        const delta = clock.getDelta();
-        const moveDir = new THREE.Vector3();
+        // CEK JARAK: Kalau player deket banget (radius 1.5 unit)
+        const dist = player.position.distanceTo(pad.position);
         
-        if(keys['KeyW']) moveDir.z -= 1;
-        if(keys['KeyS']) moveDir.z += 1;
-        if(keys['KeyA']) moveDir.x -= 1;
-        if(keys['KeyD']) moveDir.x += 1;
-        
-        moveDir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(0.1);
-        player.position.add(moveDir);
-
-        // Baterai Logic
-        if(lightOn && battery > 0) {
-            battery -= 0.02;
-            flashLight.intensity = (Math.random() > 0.99) ? 0 : 15;
-            document.getElementById('percent').innerText = Math.max(0, Math.floor(battery));
-        } else {
-            flashLight.intensity = 0;
-            if(battery <= 0) lightOn = false;
-        }
-
-        // Ambil Item
-        items.forEach((p, i) => {
-            if(player.position.distanceTo(p.position) < 1.5) {
-                scene.remove(p); items.splice(i,1);
-                notesFound++;
-                document.getElementById('nc').innerText = notesFound;
+        if(dist < 1.5) {
+            // EFEK SUARA (Bip)
+            if(audioCtx) {
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.frequency.value = 800;
+                osc.connect(g); g.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             }
-        });
 
-        // Enemy AI
-        if(enemyActive) {
-            const dist = player.position.distanceTo(enemy.position);
-            const dir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-            enemy.position.add(dir.multiplyScalar(0.035));
-            if(dist < 1.5) {
-                isDead = true;
-                document.getElementById('jumpscare').style.display = 'flex';
-                setTimeout(() => location.reload(), 3000);
-            }
+            // Hapus dari map
+            scene.remove(pad);
+            items.splice(i, 1);
+            
+            // Update UI
+            notesFound++;
+            document.getElementById('nc').innerText = notesFound;
+            
+            // NOTIFIKASI
+            showTempMsg("DATA TERAMBIL! (" + notesFound + "/5)");
         }
-    }
+    });
+}
 
-    function animate() {
-        if(!isDead) requestAnimationFrame(animate);
-        handleUpdate();
-        renderer.render(scene, camera);
-    }
-</script>
-</body>
-</html>
+// Fungsi bantu buat nampilin teks sementara
+function showTempMsg(txt) {
+    const msg = document.getElementById('msg');
+    msg.style.display = 'block';
+    msg.innerText = txt;
+    msg.style.color = "#00d4ff";
+    setTimeout(() => { if(!isDead) msg.style.display = 'none'; }, 2000);
+}
