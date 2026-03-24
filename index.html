@@ -2,31 +2,35 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD HORROR V11 - LIGHT & MAP</title>
+    <title>SQUAD HORROR V12 - REAL MAP</title>
     <style>
-        :root { --blood: #800; --neon: #00d4ff; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
+        :root { --blood: #800; --neon: #00d4ff; --radar: #0f0; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; user-select: none; }
         
         /* VISUAL FX */
         #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, black 150%); pointer-events: none; z-index: 10; }
         
         /* HUD */
         #hud { position: absolute; inset: 0; pointer-events: none; z-index: 20; padding: 20px; }
-        .stat { background: rgba(0,0,0,0.7); padding: 5px 10px; border-left: 3px solid var(--blood); margin-bottom: 5px; display: inline-block;}
+        .stat { background: rgba(0,0,0,0.8); padding: 5px 10px; border-left: 3px solid var(--blood); margin-bottom: 5px; display: inline-block;}
         
-        /* PETA / MINI-MAP (NEW) */
+        /* NEW: MINI-MAP (PRO EDITION) */
         #map-container { 
             position: absolute; top: 20px; right: 20px; 
-            width: 150px; height: 150px; 
-            background: rgba(0,20,0,0.5); /* Hijau radar jadul */
-            border: 2px solid #0f0; 
-            z-index: 30; overflow: hidden;
+            width: 160px; height: 160px; 
+            background: rgba(0,15,0,0.6); /* Hijau radar jadul */
+            border: 2px solid #0a0; 
+            z-index: 30; overflow: hidden; 
+            box-shadow: 0 0 10px rgba(0,255,0,0.3);
         }
-        #map-player { position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); }
-        /* Dot data di peta bakal dibuat lewat JS */
+        /* Penanda Player di Peta */
+        #map-player { position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); z-index: 50; }
+        
+        /* Penanda Hantu di Peta (NEW) */
+        #map-enemy { position: absolute; width: 6px; height: 6px; background: red; border-radius: 50%; transform: translate(-50%, -50%); z-index: 45; display: none; box-shadow: 0 0 5px red; }
 
         /* SCREENS */
-        #msg { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 20px; z-index: 100; }
+        #msg { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 20px; z-index: 100; text-shadow: 0 0 10px var(--neon); }
         #jumpscare { position: absolute; inset: 0; background: #000; display: none; z-index: 1000; align-items: center; justify-content: center; color: red; font-size: 50px; font-weight: 900; animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } }
     </style>
@@ -37,6 +41,7 @@
 
 <div id="map-container">
     <div id="map-player"></div>
+    <div id="map-enemy"></div>
     </div>
 
 <div id="hud">
@@ -45,8 +50,8 @@
     <div class="stat">BPM: <span id="bpm">72</span></div>
 </div>
 
-<div id="msg">KLIK LAYAR UNTUK MULAI<br><span style="font-size:14px;color:#888;">CARI TITIK BIRU DI PETA</span></div>
-<div id="jumpscare">MATA MERAH MENGAWASIMU</div>
+<div id="msg">KLIK LAYAR UNTUK MULAI<br><span style="font-size:14px;color:#888;">PERHATIKAN PETA LABIRIN DI KANAN ATAS</span></div>
+<div id="jumpscare">THE STALKER GOT YOU</div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -57,13 +62,15 @@
 
     let scene, camera, renderer, clock, player, flashLight, audioCtx;
     let yaw = new THREE.Object3D(), pitch = new THREE.Object3D();
-    let keys = {}, items = [], wallBoxes = [], mapDots = [];
+    let keys = {}, items = [], wallBoxes = [], wallMeshes = [];
+    let mapDataDots = [], mapWallDivs = [];
     let battery = 100, dataFound = 0, isDead = false;
     let enemy, enemyActive = false, canToggle = true;
 
-    // --- MAP CONFIG ---
-    const MAP_SIZE = 40; // Ukuran area operasional
-    const MINIMAP_SCALE = 150 / MAP_SIZE; // Pixel per unit Three.js
+    // --- MAP CONFIG (Fixed Koordinat Dunia ke Pixel) ---
+    const WORLD_SIZE = 40; // Area Operasional (setengah MAP_SIZE)
+    const MAP_PIXEL_SIZE = 160; // Ukuran container CSS (width/height)
+    const MAP_SCALE = MAP_PIXEL_SIZE / (WORLD_SIZE * 2); // Pixel per unit dunia
 
     // --- START ENGINE ---
     window.onclick = () => {
@@ -77,22 +84,21 @@
 
     function init() {
         scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 18); // Fog dijauhain dikit
+        scene.fog = new THREE.Fog(0x000000, 1, 16); // Fog sedeng
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         player = new THREE.Group();
-        player.position.set(0, 1.6, 18);
+        player.position.set(0, 1.6, 15);
         scene.add(player);
         player.add(yaw); yaw.add(pitch); pitch.add(camera);
 
-        // Flashlight (Strong & Focused)
-        flashLight = new THREE.SpotLight(0xffffff, 0, 25, Math.PI/7, 0.4, 1);
+        flashLight = new THREE.SpotLight(0xffffff, 0, 22, Math.PI/7, 0.4, 1);
         pitch.add(flashLight);
         flashLight.target.position.set(0, 0, -1);
         pitch.add(flashLight.target);
 
-        // --- BRIGHTNESS UP ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.06)); // Lebih terang dari sebelumnya
+        // Brightness sedeng
+        scene.add(new THREE.AmbientLight(0xffffff, 0.05));
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -100,8 +106,9 @@
 
         clock = new THREE.Clock();
         
-        buildMazeWithTorches();
-        spawnData();
+        // --- BUAT LABIRIN & PETA DINDING (NEW) ---
+        buildWorldAndMap();
+        spawnItemsAndMapDots();
         spawnRedEyedStalker();
 
         document.addEventListener('mousemove', onMouseMove);
@@ -116,105 +123,105 @@
         }
     }
 
-    // --- NEW: MAZE + OBOR DINDING ---
-    function buildMazeWithTorches() {
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x080808}));
+    // --- NEW: BUAT DUNIA + DIV DINDING DI PETA ---
+    function buildWorldAndMap() {
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x060606}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-        const wallGeo = new THREE.BoxGeometry(4, 5, 4);
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 1 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
+        const wallSize = 4;
+        const wallGeo = new THREE.BoxGeometry(wallSize, 5, wallSize);
+        const mapCont = document.getElementById('map-container');
 
-        // OBOR / TORCH SETUP
-        const torchGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
-        const torchMat = new THREE.MeshBasicMaterial({ color: 0x630 }); // Kayu coklat
-
-        for(let i=0; i<45; i++) {
+        // Taruh dinding labirin (50 Tembok)
+        for(let i=0; i<50; i++) {
             const wall = new THREE.Mesh(wallGeo, wallMat);
-            const rx = Math.floor(Math.random()*MAP_SIZE - MAP_SIZE/2);
-            const rz = Math.floor(Math.random()*MAP_SIZE - MAP_SIZE/2);
+            const rx = Math.floor(Math.random()*(WORLD_SIZE*2) - WORLD_SIZE);
+            const rz = Math.floor(Math.random()*(WORLD_SIZE*2) - WORLD_SIZE);
             
-            // Safe spawn
-            if(Math.abs(rx) < 5 && Math.abs(rz - 18) < 5) continue;
+            // JANGAN SPAWN DEKET PLAYER
+            if(Math.abs(rx) < 5 && Math.abs(rz - 15) < 5) continue;
 
             wall.position.set(rx, 2.5, rz);
             scene.add(wall);
             wallBoxes.push(new THREE.Box3().setFromObject(wall));
-
-            // PASANG OBOR (Random di beberapa tembok)
-            if(Math.random() > 0.7) {
-                const torch = new THREE.Mesh(torchGeo, torchMat);
-                // Taruh di sisi tembok
-                torch.position.set(rx, 2.5, rz + 2.01); 
-                scene.add(torch);
-
-                // Cahaya Obor (PointLight orange hangat)
-                const torchLight = new THREE.PointLight(0xffaa44, 2, 8);
-                torchLight.position.set(rx, 2.8, rz + 2.2);
-                scene.add(torchLight);
-            }
+            
+            // --- NEW: BIKIN REPRESENTASI DINDING DI PETA CSS ---
+            const wallDot = document.createElement('div');
+            wallDot.style.cssText = `position:absolute; width:${wallSize * MAP_SCALE}px; height:${wallSize * MAP_SCALE}px; background:#444;`;
+            
+            // Convert Koordinat Tembok (rx,rz) -> Pixel Peta
+            const wallX = (rx + WORLD_SIZE) * MAP_SCALE;
+            const wallZ = (rz + WORLD_SIZE) * MAP_SCALE;
+            
+            // CSS `left`/`top` adalah pojok kiri atas dinding
+            wallDot.style.left = wallX + 'px';
+            wallDot.style.top = wallZ + 'px';
+            mapCont.appendChild(wallDot);
+            mapWallDivs.push(wallDot);
         }
     }
 
-    // --- NEW: HANTU MATA MERAH ---
-    function spawnRedEyedStalker() {
-        enemy = new THREE.Group();
-        
-        // Body (Siluet Hitam)
-        const body = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.5, 0.5, 3.2), 
-            new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.9})
-        );
-        enemy.add(body);
-
-        // MATA MERAH (Menyala/Emissive)
-        const eyeGeo = new THREE.SphereGeometry(0.08, 16, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Merah Terang
-        
-        const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        leftEye.position.set(-0.2, 1.2, -0.45); // Posisi mata di muka
-        enemy.add(leftEye);
-
-        const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        rightEye.position.set(0.2, 1.2, -0.45);
-        enemy.add(rightEye);
-
-        // Cahaya mata (tipis biar ngeri)
-        const eyeLight = new THREE.PointLight(0xff0000, 1, 3);
-        eyeLight.position.set(0, 1.2, -0.6);
-        enemy.add(eyeLight);
-
-        enemy.position.set(-18, 1.6, -18);
-        scene.add(enemy);
-        setTimeout(() => enemyActive = true, 5000);
-    }
-
-    function spawnData() {
+    function spawnItemsAndMapDots() {
         const geo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
         const mat = new THREE.MeshStandardMaterial({ color: 0x00d4ff, emissive: 0x00d4ff, emissiveIntensity: 2 });
         const mapCont = document.getElementById('map-container');
 
         for(let i=0; i<5; i++) {
             const p = new THREE.Mesh(geo, mat);
-            const rx = Math.random()*(MAP_SIZE-4) - (MAP_SIZE/2-2);
-            const rz = Math.random()*(MAP_SIZE-4) - (MAP_SIZE/2-2);
+            const rx = Math.random()*(WORLD_SIZE*2-6) - (WORLD_SIZE-3);
+            const rz = Math.random()*(WORLD_SIZE*2-6) - (WORLD_SIZE-3);
             p.position.set(rx, 1.2, rz);
             scene.add(p);
             items.push(p);
 
-            // BIKIN TITIK DI PETA (Mini-map DOTS)
+            // BIKIN TITIK BIRU DATA DI PETA
             const dot = document.createElement('div');
-            dot.style.cssText = `position:absolute; width:4px; height:4px; background:#00d4ff; border-radius:50%; transform:translate(-50%,-50%);`;
+            dot.style.cssText = `position:absolute; width:4px; height:4px; background:#00d4ff; border-radius:50%; transform:translate(-50%,-50%); z-index:35;`;
+            
+            // Convert Koordinat Item (rx,rz) -> Pixel Peta
+            const dX = (rx + WORLD_SIZE) * MAP_SCALE;
+            const dZ = (rz + WORLD_SIZE) * MAP_SCALE;
+            
+            dot.style.left = dX + 'px';
+            dot.style.top = dZ + 'px';
             mapCont.appendChild(dot);
-            mapDots.push({mesh: p, dotEl: dot});
+            mapDataDots.push({mesh: p, dotEl: dot});
         }
     }
 
-    // --- CORE LOGIC ---
+    // --- NEW: STALKER DENGAN TITIK PETA MERAH ---
+    function spawnRedEyedStalker() {
+        enemy = new THREE.Group();
+        
+        // Body
+        const body = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.5, 3.2), 
+            new THREE.MeshBasicMaterial({color: 0x000000})
+        );
+        enemy.add(body);
+
+        // MATA MERAH
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const eyes = new THREE.Group();
+        for(let j=0; j<2; j++) {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 8), eyeMat);
+            eye.position.set((j-0.5)*0.4, 1.2, -0.45);
+            eyes.add(eye);
+        }
+        enemy.add(eyes);
+
+        enemy.position.set(-18, 1.6, -18); // Spawn jauh
+        scene.add(enemy);
+        setTimeout(() => enemyActive = true, 5000);
+    }
+
+    // --- CORE LOOP ---
     function update() {
         if(isDead) return;
         const delta = clock.getDelta();
 
-        // Movement (Fixed Collision)
+        // Movement (Fixed Collision sedeng)
         const speed = 0.09;
         const dir = new THREE.Vector3();
         if(keys['KeyW']) dir.z -= 1; if(keys['KeyS']) dir.z += 1;
@@ -223,7 +230,6 @@
         if(dir.length() > 0) {
             dir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(speed);
             
-            // Collision Check
             const nextPos = player.position.clone().add(dir);
             const pBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.7, 1.8, 0.7));
             let collide = false;
@@ -231,28 +237,28 @@
             if(!collide) player.position.copy(nextPos);
         }
 
-        // UPDATE MINI-MAP (NEW)
+        // --- NEW: UPDATE REAL-TIME PETA (Player, Hantu, Items) ---
         const mapP = document.getElementById('map-player');
-        // Convert Three.js pos to Minimap CSS pos
-        // Center map is (0,0), CSS 0,0 is top-left.
-        const mapX = (player.position.x + MAP_SIZE/2) * MINIMAP_SCALE;
-        const mapZ = (player.position.z + MAP_SIZE/2) * MINIMAP_SCALE;
+        // Convert Three.js pos Player (x,z) Dunia -> Pixel Peta CSS
+        const mapX = (player.position.x + WORLD_SIZE) * MAP_SCALE;
+        const mapZ = (player.position.z + WORLD_SIZE) * MAP_SCALE;
         mapP.style.left = mapX + 'px';
         mapP.style.top = mapZ + 'px';
 
-        // Update Data Dots di Peta
-        mapDots.forEach(d => {
-            const dX = (d.mesh.position.x + MAP_SIZE/2) * MINIMAP_SCALE;
-            const dZ = (d.mesh.position.z + MAP_SIZE/2) * MINIMAP_SCALE;
-            d.dotEl.style.left = dX + 'px';
-            d.dotEl.style.top = dZ + 'px';
-        });
+        // Update Posisi Hantu di Peta (NEW)
+        if(enemy) {
+            const mapE = document.getElementById('map-enemy');
+            if(enemyActive) mapE.style.display = 'block';
+            
+            const eX = (enemy.position.x + WORLD_SIZE) * MAP_SCALE;
+            const eZ = (enemy.position.z + WORLD_SIZE) * MAP_SCALE;
+            mapE.style.left = eX + 'px';
+            mapE.style.top = eZ + 'px';
+        }
 
-        // Flashlight 'E' Anti-Spam
+        // Flashlight 'E' logic
         if(keys['KeyE'] && canToggle) {
-            const on = flashLight.intensity > 0;
-            flashLight.intensity = on ? 0 : 18;
-            battery -= 1; // Cost to toggle
+            flashLight.intensity = (flashLight.intensity > 0) ? 0 : 18;
             canToggle = false; setTimeout(()=>canToggle=true, 300);
         }
 
@@ -269,23 +275,23 @@
                 scene.remove(it); items.splice(i, 1);
                 dataFound++; document.getElementById('dc').innerText = dataFound;
                 
-                // Hapus dot di peta
-                const dotIdx = mapDots.findIndex(d => d.mesh === it);
+                // Hapus dot di peta CSS
+                const dotIdx = mapDataDots.findIndex(d => d.mesh === it);
                 if(dotIdx !== -1) {
-                    mapDots[dotIdx].dotEl.remove();
-                    mapDots.splice(dotIdx, 1);
+                    mapDataDots[dotIdx].dotEl.remove();
+                    mapDataDots.splice(dotIdx, 1);
                 }
             }
         });
 
-        // Enemy AI (Stalker with Red Eyes)
+        // Enemy AI (Red Eyes)
         if(enemyActive) {
-            enemy.lookAt(player.position); // Selalu hadap player
+            enemy.lookAt(player.position);
             const dist = player.position.distanceTo(enemy.position);
             const eDir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
             
-            // Speed scaling based on data found
-            let eSpeed = 0.035 + (dataFound * 0.01);
+            // Speed scaling
+            let eSpeed = 0.035 + (dataFound * 0.015);
             enemy.position.add(eDir.multiplyScalar(eSpeed));
             
             document.getElementById('bpm').innerText = Math.floor(70 + (10/dist)*30);
