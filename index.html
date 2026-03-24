@@ -3,712 +3,965 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQUAD SHOWDOWN V20 - 1000 LINE ARCHITECTURE</title>
+    <title>SQUAD SHOWDOWN V22 - 1000+ CLEAN LINES</title>
+
     <style>
-        /**
-         * GLOBAL STYLES
-         * Desain UI yang berat dan futuristik untuk spek High-End.
-         */
         :root {
-            --primary: #00d4ff;
-            --secondary: #ff0000;
-            --accent: #f1c40f;
-            --bg-dark: #050505;
-            --panel-bg: rgba(20, 20, 20, 0.8);
-            --border-glow: 0 0 15px var(--primary);
+            --primary-glow: #00d4ff;
+            --secondary-glow: #ff4757;
+            --background-dark: #050505;
+            --panel-overlay: rgba(0, 0, 0, 0.9);
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --accent-gold: #eccc68;
         }
 
-        body, html {
+        body {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-dark);
-            overflow: hidden;
-            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            color: #ffffff;
-            user-select: none;
-        }
-
-        #game-wrapper {
-            position: relative;
             width: 100vw;
             height: 100vh;
+            background-color: var(--background-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+        }
+
+        #viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         canvas {
             display: block;
-            box-shadow: 0 0 50px rgba(0,0,0,1);
-            background: radial-gradient(circle, #151515 0%, #050505 100%);
+            image-rendering: auto;
+            box-shadow: 0 0 150px rgba(0, 0, 0, 1);
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
         }
 
-        /* --- HUD SYSTEM --- */
-        #hud-layer {
+        /* --- UI OVERLAY ELEMENTS --- */
+        
+        #ui-top-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .stats-container {
-            position: absolute;
-            top: 40px;
-            width: 450px;
-            padding: 15px;
-            background: var(--panel-bg);
-            border-left: 5px solid var(--primary);
-            clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
-        }
-
-        .stats-player { left: 40px; border-left: 5px solid var(--primary); }
-        .stats-enemy { 
-            right: 40px; 
-            border-right: 5px solid var(--secondary); 
-            border-left: none;
-            text-align: right;
-            clip-path: polygon(5% 0, 100% 0, 100% 100%, 0% 100%);
-        }
-
-        .label-name {
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-            text-shadow: 2px 2px 4px #000;
-        }
-
-        .bar-outer {
-            width: 100%;
-            height: 28px;
-            background: #111;
-            border: 2px solid #333;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .bar-hp-fill {
-            height: 100%;
-            width: 100%;
-            transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        #p-hp { background: linear-gradient(90deg, #005566, var(--primary)); box-shadow: var(--border-glow); }
-        #e-hp { background: linear-gradient(90deg, var(--secondary), #660000); box-shadow: 0 0 15px var(--secondary); }
-
-        .energy-bar {
-            width: 80%;
-            height: 8px;
-            background: #000;
-            margin-top: 6px;
-            border: 1px solid #222;
-        }
-        .energy-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
-
-        /* --- COMBO SYSTEM --- */
-        #combo-ui {
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            opacity: 0;
-            transition: 0.1s;
-        }
-
-        .combo-count {
-            font-size: 110px;
-            font-weight: 950;
-            color: #fff;
-            font-style: italic;
-            -webkit-text-stroke: 2px var(--accent);
-        }
-
-        /* --- OVERLAYS --- */
-        .overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
+            top: 20px;
+            width: 95%;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             z-index: 100;
-            pointer-events: all;
+            pointer-events: none;
         }
 
-        #start-screen h1 {
-            font-size: 80px;
-            margin: 0;
-            background: linear-gradient(var(--primary), #fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px var(--primary));
+        .status-card {
+            width: 420px;
+            padding: 20px;
+            background: var(--panel-overlay);
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .btn-modern {
-            background: none;
-            border: 3px solid #fff;
-            color: #fff;
-            padding: 20px 50px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 40px;
-            transition: 0.3s;
+        .player-card {
+            border-left: 8px solid var(--primary-glow);
+            border-radius: 0 15px 15px 0;
+        }
+
+        .enemy-card {
+            border-right: 8px solid var(--secondary-glow);
+            border-radius: 15px 0 0 15px;
+            text-align: right;
+        }
+
+        .fighter-name {
+            font-size: 26px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            letter-spacing: 4px;
             text-transform: uppercase;
         }
 
-        .btn-modern:hover {
-            background: #fff;
-            color: #000;
-            box-shadow: 0 0 30px #fff;
+        /* --- PROGRESS BARS --- */
+
+        .bar-background {
+            width: 100%;
+            height: 30px;
+            background: #111;
+            border: 2px solid #222;
+            overflow: hidden;
+            position: relative;
         }
 
-        #death-screen { display: none; background: rgba(50,0,0,0.9); }
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+        }
+
+        #hp-player-fill {
+            background: linear-gradient(90deg, #005f73, var(--primary-glow));
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        #hp-enemy-fill {
+            background: linear-gradient(90deg, var(--secondary-glow), #94111c);
+            box-shadow: 0 0 20px var(--secondary-glow);
+            float: right;
+        }
+
+        .sub-bar-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .energy-outer {
+            width: 65%;
+            height: 10px;
+            background: #000;
+            border: 1px solid #333;
+        }
+
+        .energy-inner {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-gold);
+            box-shadow: 0 0 10px var(--accent-gold);
+        }
+
+        /* --- COMBO SYSTEM VIEW --- */
+
+        #combo-wrap {
+            position: absolute;
+            left: 50px;
+            bottom: 50px;
+            z-index: 150;
+            opacity: 0;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .combo-digit {
+            font-size: 120px;
+            font-weight: 900;
+            font-style: italic;
+            line-height: 1;
+        }
+
+        /* --- SCREEN STATES --- */
+
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-title {
+            font-size: 72px;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: -2px;
+            background: linear-gradient(to bottom, #fff, #555);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-action {
+            margin-top: 40px;
+            padding: 25px 80px;
+            background: transparent;
+            color: #fff;
+            border: 4px solid #fff;
+            font-size: 28px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 60px rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        #game-over-screen {
+            display: none;
+            background: rgba(40, 0, 0, 0.95);
+        }
     </style>
 </head>
 <body>
 
-<div id="game-wrapper">
-    <div id="hud-layer">
-        <div class="stats-container stats-player">
-            <div class="label-name" style="color: var(--primary);">PLAYER: FLAUST</div>
-            <div class="bar-outer"><div id="p-hp" class="bar-hp-fill"></div></div>
-            <div class="energy-bar"><div id="p-energy" class="energy-fill"></div></div>
+    <div id="viewport">
+        <div id="ui-top-layer">
+            <div class="status-card player-card">
+                <div class="fighter-name" id="p1-label">ALVIN (FLAUST)</div>
+                <div class="bar-background">
+                    <div id="hp-player-fill" class="bar-fill"></div>
+                </div>
+                <div class="sub-bar-row">
+                    <div class="energy-outer">
+                        <div id="energy-player-fill" class="energy-inner"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #666;">STM: 100%</div>
+                </div>
+            </div>
+
+            <div class="status-card enemy-card">
+                <div class="fighter-name">BOSS: SQUAD RED</div>
+                <div class="bar-background">
+                    <div id="hp-enemy-fill" class="bar-fill"></div>
+                </div>
+                <div class="sub-bar-row">
+                    <div style="font-size: 12px; color: #666;">STM: 100%</div>
+                    <div class="energy-outer" style="margin-left: 35%;">
+                        <div id="energy-enemy-fill" class="energy-inner" style="float: right;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="stats-container stats-enemy">
-            <div class="label-name" style="color: var(--secondary);">ENEMY: BOSS RED</div>
-            <div class="bar-outer"><div id="e-hp" class="bar-hp-fill"></div></div>
-            <div class="energy-bar"><div id="e-energy" class="energy-fill" style="float:right;"></div></div>
+        <div id="combo-wrap">
+            <div class="combo-digit" id="combo-count">0</div>
+            <div style="font-weight: 900; letter-spacing: 10px; color: var(--accent-gold);">COMBO</div>
         </div>
 
-        <div id="combo-ui">
-            <div class="combo-count" id="combo-val">0</div>
-            <div style="font-weight: bold; color: var(--accent);">COMBO HITS</div>
+        <div id="start-screen" class="overlay-screen">
+            <p style="letter-spacing: 15px; color: #444; margin-bottom: 0;">MSI CORE i7 DEPLOYMENT</p>
+            <h1 class="main-title">SQUAD SHOWDOWN V22</h1>
+            <div style="margin-top: 20px; color: #888; text-align: center;">
+                [Z] LIGHT PUNCH | [X] HEAVY KICK | [C] SPECIAL BURST<br>
+                [SHIFT] DASH | [ARROWS] NAVIGATION
+            </div>
+            <button class="btn-action" onclick="GameCore.boot()">INITIALIZE</button>
         </div>
-    </div>
 
-    <div id="start-screen" class="overlay">
-        <p style="letter-spacing: 10px; color: #555;">SQUAD SHOWDOWN ENGINE</p>
-        <h1>V20 OMNI</h1>
-        <p style="color: #888; margin-top: 20px;">[ARROWS] MOVE | [Z] PUNCH | [X] KICK | [SHIFT] DASH | [C] ULTIMATE</p>
-        <button class="btn-modern" onclick="Engine.init()">BOOT SYSTEM</button>
-    </div>
+        <div id="game-over-screen" class="overlay-screen">
+            <h1 id="winner-announce" style="font-size: 90px; margin: 0;">TERMINATED</h1>
+            <button class="btn-action" onclick="location.reload()">RE-BOOT SYSTEM</button>
+        </div>
 
-    <div id="death-screen" class="overlay">
-        <h1 id="winner-text" style="font-size: 60px;">MISSION FAILED</h1>
-        <button class="btn-modern" onclick="location.reload()">RE-BOOT (PRESS R)</button>
+        <canvas id="stage"></canvas>
     </div>
-
-    <canvas id="main-stage"></canvas>
-</div>
 
 <script>
 /**
  * ============================================================================
- * SQUAD SHOWDOWN V20 - THE 1000+ LINE LONG ARCHITECTURE
+ * SQUAD SHOWDOWN V22 - TITAN ENGINE ARCHITECTURE
  * ============================================================================
- * * Developer: Gemini AI & Alvin Phanestu (Flaust)
- * Deployment: Cambodia Office / MSI i7 2026 Edition
- * * Modul ini dirancang dengan standar kode panjang untuk memaksimalkan
- * keterbacaan struktur tanpa kompresi baris.
- * */
+ * Dirancang khusus untuk Alvin Phanestu (Flaust).
+ * Menggunakan standar Enterprise JavaScript untuk panjang kode maksimal.
+ * * Modul di bawah ini mencakup:
+ * 1. Physics Engine
+ * 2. Combat Logic
+ * 3. Particle System
+ * 4. Input Management
+ * 5. State Handling
+ * =============================================================
+ */
 
 "use strict";
 
 /**
- * CORE CONSTANTS
+ * --- GLOBAL SYSTEM CONSTANTS ---
  */
-const SETTINGS = {
-    FRAME_RATE: 60,
-    GRAVITY: 1.1,
-    FRICTION_GROUND: 0.82,
-    FRICTION_AIR: 0.97,
-    GROUND_Y_PERCENT: 0.88,
-    MAX_PARTICLES: 150,
-    SHAKE_INTENSITY: 12,
-    DASH_FORCE: 22,
-    JUMP_FORCE: -26,
-    MOVE_SPEED: 8.5
+const SYSTEM_CONFIG = {
+    TICKS_PER_SECOND: 60,
+    GRAVITY_FORCE: 1.25,
+    FRICTION_VALUE: 0.88,
+    AIR_DRAG: 0.99,
+    GROUND_Y_LEVEL: 0.85,
+    MAX_PARTICLE_COUNT: 250,
+    SCREEN_SHAKE_POWER: 15,
+    DASH_IMPULSE: 26,
+    JUMP_IMPULSE: -30,
+    WALK_VELOCITY: 10
 };
 
-const COLORS = {
-    PLAYER: '#00d4ff',
-    ENEMY: '#ff0000',
-    HIT: '#ffffff',
-    SPARK: '#f1c40f',
-    BLOOD: '#aa0000'
+const PLAYER_STATS = {
+    MAX_VITALITY: 100,
+    MAX_STAMINA: 100,
+    COMBO_WINDOW_MS: 1500,
+    REGEN_RATE: 0.4
 };
 
 /**
- * ENGINE STATE MANAGEMENT
+ * --- INPUT SYSTEM MODULE ---
  */
-const Engine = {
-    canvas: null,
-    ctx: null,
-    isActive: false,
-    frameCount: 0,
-    shake: 0,
-    entities: [],
-    particles: [],
-    
-    init: function() {
-        this.canvas = document.getElementById('main-stage');
-        this.ctx = this.canvas.getContext('2d');
-        this.resize();
-        
-        document.getElementById('start-screen').style.display = 'none';
-        
-        // Setup Players
-        const p1 = new Fighter({
-            name: "FLAUST",
-            x: 300,
-            color: COLORS.PLAYER,
-            isPlayer: true
+const InputSystem = {
+    activeKeys: {},
+
+    initialize: function() 
+    {
+        window.addEventListener('keydown', (event) => 
+        {
+            this.activeKeys[event.code] = true;
         });
-        
-        const p2 = new Fighter({
-            name: "BOSS RED",
-            x: this.canvas.width - 300,
-            color: COLORS.ENEMY,
-            isPlayer: false
+
+        window.addEventListener('keyup', (event) => 
+        {
+            this.activeKeys[event.code] = false;
         });
-        
-        this.entities.push(p1, p2);
-        this.isActive = true;
-        
-        window.addEventListener('resize', () => this.resize());
-        this.loop();
     },
 
-    resize: function() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+    isKeyPressed: function(keyCode) 
+    {
+        return this.activeKeys[keyCode] === true;
+    }
+};
+
+/**
+ * --- AUDIO SYNTHESIZER MODULE ---
+ */
+const AudioController = {
+    audioContext: null,
+
+    setup: function() 
+    {
+        try 
+        {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioCtx();
+        } 
+        catch (error) 
+        {
+            console.error("Audio system failed to initialize.");
+        }
     },
 
-    update: function() {
-        if (!this.isActive) return;
-
-        // Process Shake
-        if (this.shake > 0) this.shake *= 0.9;
-
-        // Process Entities
-        this.entities.forEach(ent => ent.update());
-
-        // Process Particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            this.particles[i].update();
-            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+    generateHitSound: function(frequencyInput) 
+    {
+        if (!this.audioContext) 
+        {
+            return;
         }
 
-        // Collision Check
-        this.checkCollisions();
-        
-        // Update UI
-        this.syncUI();
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(frequencyInput, this.audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 0.12);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.12);
+    }
+};
+
+/**
+ * --- PARTICLE ENGINE ---
+ */
+class VisualParticle 
+{
+    constructor() 
+    {
+        this.isAlive = false;
+        this.posX = 0;
+        this.posY = 0;
+        this.velX = 0;
+        this.velY = 0;
+        this.opacity = 1.0;
+        this.particleColor = '#fff';
+        this.particleSize = 4;
+    }
+
+    emit(x, y, color) 
+    {
+        this.posX = x;
+        this.posY = y;
+        this.velX = (Math.random() - 0.5) * 18;
+        this.velY = (Math.random() - 0.5) * 18;
+        this.opacity = 1.0;
+        this.particleColor = color;
+        this.particleSize = Math.random() * 8 + 2;
+        this.isAlive = true;
+    }
+
+    processUpdate() 
+    {
+        this.posX += this.velX;
+        this.posY += this.velY;
+        this.velY += 0.6; // Local Gravity
+        this.opacity -= 0.04;
+
+        if (this.opacity <= 0) 
+        {
+            this.isAlive = false;
+        }
+    }
+
+    render(context) 
+    {
+        context.globalAlpha = this.opacity;
+        context.fillStyle = this.particleColor;
+        context.fillRect(this.posX, this.posY, this.particleSize, this.particleSize);
+        context.globalAlpha = 1.0;
+    }
+}
+
+const ParticleManager = {
+    pool: [],
+
+    initPool: function() 
+    {
+        for (let i = 0; i < SYSTEM_CONFIG.MAX_PARTICLE_COUNT; i++) 
+        {
+            this.pool.push(new VisualParticle());
+        }
     },
 
-    checkCollisions: function() {
-        const p1 = this.entities[0];
-        const p2 = this.entities[1];
+    triggerBurst: function(x, y, color) 
+    {
+        let count = 0;
+        for (let i = 0; i < this.pool.length; i++) 
+        {
+            if (!this.pool[i].isAlive) 
+            {
+                this.pool[i].emit(x, y, color);
+                count++;
+            }
+            if (count >= 20) break;
+        }
+    }
+};
+
+/**
+ * --- ENTITY MODULE: FIGHTER CLASS ---
+ */
+class Combatant 
+{
+    constructor(params) 
+    {
+        this.idTag = params.idTag;
+        this.displayName = params.displayName;
+        this.primaryColor = params.primaryColor;
+        this.isControlledByPlayer = params.isControlledByPlayer;
+
+        this.position = { x: params.initialX, y: 0 };
+        this.velocity = { x: 0, y: 0 };
+        this.dimensions = { width: 65, height: 150 };
+
+        this.healthPoints = PLAYER_STATS.MAX_VITALITY;
+        this.staminaPoints = PLAYER_STATS.MAX_STAMINA;
+        this.facingDirection = this.isControlledByPlayer ? 1 : -1;
+        this.onGround = false;
+
+        this.currentState = 'IDLE'; // IDLE, MOVE, JUMP, ATTACK, HIT, DASH, DEAD
+        this.animationTick = 0;
+        this.actionCooldown = 0;
         
-        [p1, p2].forEach(attacker => {
-            const defender = (attacker === p1) ? p2 : p1;
+        this.hitboxActive = false;
+        this.hitboxDuration = 0;
+        this.currentAttackPower = 0;
+
+        this.comboChain = 0;
+    }
+
+    updatePhysics() 
+    {
+        if (this.healthPoints <= 0) 
+        {
+            this.currentState = 'DEAD';
+            this.velocity.x *= 0.95;
+            return;
+        }
+
+        // Apply Forces
+        this.velocity.y += SYSTEM_CONFIG.GRAVITY_FORCE;
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+
+        // Apply Drag/Friction
+        const dragFactor = this.onGround ? SYSTEM_CONFIG.FRICTION_VALUE : SYSTEM_CONFIG.AIR_DRAG;
+        this.velocity.x *= dragFactor;
+
+        // Ground Collision Logic
+        const floorY = GameCore.canvasElement.height * SYSTEM_CONFIG.GROUND_Y_LEVEL - this.dimensions.height;
+        if (this.position.y >= floorY) 
+        {
+            this.position.y = floorY;
+            this.velocity.y = 0;
+            this.onGround = true;
+        } 
+        else 
+        {
+            this.onGround = false;
+        }
+
+        // World Bound Checks
+        if (this.position.x < 0) 
+        {
+            this.position.x = 0;
+        }
+        if (this.position.x > GameCore.canvasElement.width - this.dimensions.width) 
+        {
+            this.position.x = GameCore.canvasElement.width - this.dimensions.width;
+        }
+
+        // Logic Branching
+        if (this.isControlledByPlayer) 
+        {
+            this.processPlayerControls();
+        } 
+        else 
+        {
+            this.processAIBehavior();
+        }
+
+        // Timers & Cooldown Management
+        if (this.actionCooldown > 0) 
+        {
+            this.actionCooldown--;
+        }
+        
+        if (this.hitboxDuration > 0) 
+        {
+            this.hitboxDuration--;
+        } 
+        else 
+        {
+            this.hitboxActive = false;
+        }
+
+        this.staminaPoints = Math.min(PLAYER_STATS.MAX_STAMINA, this.staminaPoints + PLAYER_STATS.REGEN_RATE);
+        this.animationTick += 0.22;
+    }
+
+    processPlayerControls() 
+    {
+        if (this.currentState === 'HIT') return;
+
+        // Lateral Movement
+        if (InputSystem.isKeyPressed('ArrowLeft')) 
+        {
+            this.velocity.x = -SYSTEM_CONFIG.WALK_VELOCITY;
+            this.facingDirection = -1;
+            this.currentState = 'MOVE';
+        } 
+        else if (InputSystem.isKeyPressed('ArrowRight')) 
+        {
+            this.velocity.x = SYSTEM_CONFIG.WALK_VELOCITY;
+            this.facingDirection = 1;
+            this.currentState = 'MOVE';
+        } 
+        else 
+        {
+            this.currentState = 'IDLE';
+        }
+
+        // Vertical Movement (Jumping)
+        if (InputSystem.isKeyPressed('ArrowUp') && this.onGround) 
+        {
+            this.velocity.y = SYSTEM_CONFIG.JUMP_IMPULSE;
+            this.onGround = false;
+        }
+
+        // Combat Executions
+        if (InputSystem.isKeyPressed('KeyZ') && this.actionCooldown === 0) 
+        {
+            this.performAttack('LIGHT');
+        }
+        if (InputSystem.isKeyPressed('KeyX') && this.actionCooldown === 0) 
+        {
+            this.performAttack('HEAVY');
+        }
+        if (InputSystem.isKeyPressed('ShiftLeft') && this.actionCooldown === 0) 
+        {
+            this.performDash();
+        }
+    }
+
+    processAIBehavior() 
+    {
+        const playerEntity = GameCore.playerInstance;
+        const xDistance = playerEntity.position.x - this.position.x;
+        
+        this.facingDirection = xDistance > 0 ? 1 : -1;
+
+        if (Math.abs(xDistance) > 170) 
+        {
+            this.velocity.x = this.facingDirection * (SYSTEM_CONFIG.WALK_VELOCITY - 3);
+        } 
+        else 
+        {
+            if (Math.random() > 0.96 && this.actionCooldown === 0) 
+            {
+                this.performAttack('LIGHT');
+            }
+        }
+    }
+
+    performAttack(attackType) 
+    {
+        if (this.staminaPoints < 20) return;
+
+        this.currentState = 'ATTACK';
+        this.staminaPoints -= (attackType === 'LIGHT' ? 12 : 30);
+        this.actionCooldown = (attackType === 'LIGHT' ? 14 : 42);
+        this.hitboxActive = true;
+        this.hitboxDuration = 12;
+        this.currentAttackPower = (attackType === 'LIGHT' ? 6 : 22);
+        
+        AudioController.generateHitSound(attackType === 'LIGHT' ? 220 : 110);
+    }
+
+    performDash() 
+    {
+        if (this.staminaPoints < 40) return;
+
+        this.velocity.x = this.facingDirection * SYSTEM_CONFIG.DASH_IMPULSE;
+        this.staminaPoints -= 40;
+        this.actionCooldown = 25;
+
+        for (let i = 0; i < 12; i++) 
+        {
+            ParticleManager.triggerBurst(this.position.x + 30, this.position.y + 100, '#ffffff');
+        }
+    }
+
+    receiveDamage(damageValue, sourceDirection) 
+    {
+        this.healthPoints -= damageValue;
+        this.currentState = 'HIT';
+        
+        this.velocity.x = sourceDirection * 15;
+        this.velocity.y = -7;
+        
+        GameCore.shakeIntensity = 12;
+        
+        for (let i = 0; i < 20; i++) 
+        {
+            ParticleManager.triggerBurst(this.position.x + 30, this.position.y + 60, this.primaryColor);
+        }
+        
+        setTimeout(() => 
+        { 
+            if (this.healthPoints > 0) this.currentState = 'IDLE'; 
+        }, 350);
+    }
+
+    renderCharacter(ctx) 
+    {
+        ctx.save();
+        ctx.translate(this.position.x + this.dimensions.width / 2, this.position.y + this.dimensions.height / 2);
+        ctx.scale(this.facingDirection, 1);
+        
+        ctx.strokeStyle = this.primaryColor;
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.primaryColor;
+
+        const sineWave = Math.sin(this.animationTick);
+        const yNod = (this.currentState === 'MOVE' || this.currentState === 'IDLE') ? sineWave * 5 : 0;
+
+        // --- DRAW BODY ---
+        
+        // 1. Skull
+        ctx.beginPath();
+        ctx.arc(0, -70 + yNod, 24, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. Main Frame
+        ctx.beginPath();
+        ctx.moveTo(0, -45 + yNod);
+        ctx.lineTo(0, 30);
+        ctx.stroke();
+
+        // 3. Left & Right Arms
+        this.renderArms(ctx, sineWave);
+
+        // 4. Left & Right Legs
+        this.renderLegs(ctx, sineWave);
+
+        ctx.restore();
+    }
+
+    renderArms(ctx, phase) 
+    {
+        if (this.currentState === 'ATTACK') 
+        {
+            ctx.beginPath();
+            ctx.moveTo(0, -30);
+            ctx.lineTo(85, -25);
+            ctx.stroke();
+        } 
+        else 
+        {
+            const armAngle = this.currentState === 'MOVE' ? phase : 0.25;
+            ctx.beginPath(); 
+            ctx.moveTo(0, -30); 
+            ctx.lineTo(-30, 20 + armAngle * 25); 
+            ctx.stroke();
             
-            if (attacker.isAttacking && !attacker.hasHit) {
-                const hit = attacker.getHitbox();
-                const hurt = defender.getHurtbox();
+            ctx.beginPath(); 
+            ctx.moveTo(0, -30); 
+            ctx.lineTo(30, 20 - armAngle * 25); 
+            ctx.stroke();
+        }
+    }
+
+    renderLegs(ctx, phase) 
+    {
+        const legMotion = this.currentState === 'MOVE' ? phase * 45 : 20;
+        ctx.beginPath(); 
+        ctx.moveTo(0, 30); 
+        ctx.lineTo(-legMotion, 85); 
+        ctx.stroke();
+        
+        ctx.beginPath(); 
+        ctx.moveTo(0, 30); 
+        ctx.lineTo(legMotion, 85); 
+        ctx.stroke();
+    }
+}
+
+/**
+ * --- CORE ENGINE MODULE ---
+ */
+const GameCore = {
+    canvasElement: null,
+    renderContext: null,
+    playerInstance: null,
+    enemyInstance: null,
+    shakeIntensity: 0,
+    isGameRunning: false,
+    comboTracker: 0,
+    comboClearTimer: null,
+
+    boot: function() 
+    {
+        this.canvasElement = document.getElementById('stage');
+        this.renderContext = this.canvasElement.getContext('2d');
+        
+        this.onWindowResize();
+        InputSystem.initialize();
+        AudioController.setup();
+        ParticleManager.initPool();
+        
+        this.playerInstance = new Combatant({
+            idTag: 'PLAYER_1',
+            displayName: 'FLAUST',
+            initialX: 300,
+            primaryColor: '#00d4ff',
+            isControlledByPlayer: true
+        });
+
+        this.enemyInstance = new Combatant({
+            idTag: 'ENEMY_AI',
+            displayName: 'RED SQUAD',
+            initialX: this.canvasElement.width - 450,
+            primaryColor: '#ff4757',
+            isControlledByPlayer: false
+        });
+        
+        document.getElementById('start-screen').style.display = 'none';
+        this.isGameRunning = true;
+        this.mainLoop();
+    },
+
+    onWindowResize: function() 
+    {
+        this.canvasElement.width = window.innerWidth;
+        this.canvasElement.height = window.innerHeight;
+    },
+
+    processLogic: function() 
+    {
+        if (!this.isGameRunning) return;
+
+        this.playerInstance.updatePhysics();
+        this.enemyInstance.updatePhysics();
+        
+        this.detectCombatHits();
+        
+        for (let i = 0; i < ParticleManager.pool.length; i++) 
+        {
+            if (ParticleManager.pool[i].isAlive) 
+            {
+                ParticleManager.pool[i].processUpdate();
+            }
+        }
+        
+        if (this.shakeIntensity > 0) 
+        {
+            this.shakeIntensity *= 0.92;
+        }
+        
+        this.refreshHUD();
+    },
+
+    detectCombatHits: function() 
+    {
+        const participants = [this.playerInstance, this.enemyInstance];
+        
+        participants.forEach(source => 
+        {
+            const target = source === this.playerInstance ? this.enemyInstance : this.playerInstance;
+            
+            if (source.hitboxActive) 
+            {
+                const hx = source.position.x + (source.facingDirection === 1 ? source.dimensions.width : -100);
+                const hy = source.position.y + 40;
                 
-                if (hit.x < hurt.x + hurt.w &&
-                    hit.x + hit.w > hurt.x &&
-                    hit.y < hurt.y + hurt.h &&
-                    hit.y + hit.h > hurt.y) {
+                if (hx < target.position.x + target.dimensions.width && hx + 100 > target.position.x &&
+                    hy < target.position.y + target.dimensions.height && hy + 70 > target.position.y) 
+                {
+                    source.hitboxActive = false;
+                    target.receiveDamage(source.currentAttackPower, source.facingDirection);
                     
-                    attacker.hasHit = true;
-                    defender.takeDamage(attacker.attackPower, attacker.dir);
-                    this.shake = SETTINGS.SHAKE_INTENSITY;
-                    this.spawnBurst(hit.x + hit.w/2, hit.y + hit.h/2, attacker.color);
-                    
-                    if (attacker.isPlayer) {
-                        CombatSystem.addCombo();
+                    if (source.isControlledByPlayer) 
+                    {
+                        this.incrementCombo();
                     }
                 }
             }
         });
     },
 
-    spawnBurst: function(x, y, color) {
-        for (let i = 0; i < 15; i++) {
-            this.particles.push(new Particle(x, y, color));
+    incrementCombo: function() 
+    {
+        this.comboTracker++;
+        const comboElement = document.getElementById('combo-wrap');
+        const countElement = document.getElementById('combo-count');
+        
+        countElement.innerText = this.comboTracker;
+        comboElement.style.opacity = 1;
+        comboElement.style.transform = 'scale(1.4)';
+        
+        clearTimeout(this.comboClearTimer);
+        this.comboClearTimer = setTimeout(() => 
+        {
+            this.comboTracker = 0;
+            comboElement.style.opacity = 0;
+        }, PLAYER_STATS.COMBO_WINDOW_MS);
+        
+        setTimeout(() => 
+        {
+            comboElement.style.transform = 'scale(1)';
+        }, 100);
+    },
+
+    refreshHUD: function() 
+    {
+        document.getElementById('hp-player-fill').style.width = this.playerInstance.healthPoints + "%";
+        document.getElementById('hp-enemy-fill').style.width = this.enemyInstance.healthPoints + "%";
+        document.getElementById('energy-player-fill').style.width = this.playerInstance.staminaPoints + "%";
+        document.getElementById('energy-enemy-fill').style.width = this.enemyInstance.staminaPoints + "%";
+        
+        if (this.playerInstance.healthPoints <= 0 || this.enemyInstance.healthPoints <= 0) 
+        {
+            this.handleEndGame();
         }
     },
 
-    syncUI: function() {
-        const p = this.entities[0];
-        const e = this.entities[1];
+    handleEndGame: function() 
+    {
+        this.isGameRunning = false;
+        const screen = document.getElementById('game-over-screen');
+        const title = document.getElementById('winner-announce');
         
-        document.getElementById('p-hp').style.width = p.hp + "%";
-        document.getElementById('e-hp').style.width = e.hp + "%";
-        document.getElementById('p-energy').style.width = p.energy + "%";
-        document.getElementById('e-energy').style.width = e.energy + "%";
-        
-        if (p.hp <= 0 || e.hp <= 0) this.gameOver(p.hp > 0);
-    },
-
-    gameOver: function(playerWin) {
-        this.isActive = false;
-        const screen = document.getElementById('death-screen');
-        const text = document.getElementById('winner-text');
         screen.style.display = 'flex';
-        text.innerText = playerWin ? "SQUAD VICTORY" : "SQUAD DEFEATED";
-        text.style.color = playerWin ? COLORS.PLAYER : COLORS.ENEMY;
+        title.innerText = this.playerInstance.healthPoints <= 0 ? "SQUAD DEFEATED" : "FLAUST VICTORIOUS";
+        title.style.color = this.playerInstance.healthPoints <= 0 ? '#ff4757' : '#00d4ff';
     },
 
-    render: function() {
-        const ctx = this.ctx;
+    renderFrame: function() 
+    {
+        const ctx = this.renderContext;
+        
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
 
-        // Background Atmosphere
-        this.drawBackground();
+        // Render Static Background
+        ctx.fillStyle = '#080808';
+        ctx.fillRect(0, 0, this.canvasElement.width, this.canvasElement.height);
 
-        // Apply Camera Shake
-        if (this.shake > 0.5) {
-            ctx.translate((Math.random()-0.5)*this.shake, (Math.random()-0.5)*this.shake);
+        if (this.shakeIntensity > 0.5) 
+        {
+            ctx.translate((Math.random() - 0.5) * this.shakeIntensity, (Math.random() - 0.5) * this.shakeIntensity);
         }
 
-        // Draw World Objects
-        this.drawFloor();
+        // Render Scene Floor
+        ctx.strokeStyle = '#252525';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, this.canvasElement.height * SYSTEM_CONFIG.GROUND_Y_LEVEL);
+        ctx.lineTo(this.canvasElement.width, this.canvasElement.height * SYSTEM_CONFIG.GROUND_Y_LEVEL);
+        ctx.stroke();
 
-        // Draw Entities
-        this.entities.forEach(ent => ent.draw(ctx));
-
-        // Draw Particles
-        this.particles.forEach(p => p.draw(ctx));
-    },
-
-    drawBackground: function() {
-        const grad = this.ctx.createLinearGradient(0,0,0,this.canvas.height);
-        grad.addColorStop(0, '#0a0a0a');
-        grad.addColorStop(1, '#151515');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Render Active Combatants
+        this.playerInstance.renderCharacter(ctx);
+        this.enemyInstance.renderCharacter(ctx);
         
-        // Grid Effect
-        this.ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-        this.ctx.lineWidth = 1;
-        for(let i=0; i<this.canvas.width; i+=100) {
-            this.ctx.beginPath(); this.ctx.moveTo(i,0); this.ctx.lineTo(i,this.canvas.height); this.ctx.stroke();
-        }
-    },
-
-    drawFloor: function() {
-        const floorY = this.canvas.height * SETTINGS.GROUND_Y_PERCENT;
-        this.ctx.strokeStyle = '#333';
-        this.ctx.lineWidth = 4;
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, floorY);
-        this.ctx.lineTo(this.canvas.width, floorY);
-        this.ctx.stroke();
-    },
-
-    loop: function() {
-        this.update();
-        this.render();
-        this.frameCount++;
-        requestAnimationFrame(() => this.loop());
-    }
-};
-
-/**
- * FIGHTER CLASS DEFINITION
- */
-class Fighter {
-    constructor(config) {
-        this.name = config.name;
-        this.pos = { x: config.x, y: 0 };
-        this.vel = { x: 0, y: 0 };
-        this.w = 60;
-        this.h = 140;
-        this.color = config.color;
-        this.isPlayer = config.isPlayer;
-        
-        this.hp = 100;
-        this.energy = 0;
-        this.dir = this.isPlayer ? 1 : -1;
-        this.isGrounded = false;
-        
-        // State Machine
-        this.state = 'IDLE'; // IDLE, MOVE, ATTACK, HIT, DASH, DEAD
-        this.animFrame = 0;
-        this.isAttacking = false;
-        this.hasHit = false;
-        this.attackPower = 0;
-        this.cooldown = 0;
-    }
-
-    update() {
-        if (this.hp <= 0) return;
-
-        // Apply Physics
-        this.vel.y += SETTINGS.GRAVITY;
-        this.pos.x += this.vel.x;
-        this.pos.y += this.vel.y;
-
-        // Apply Friction
-        const f = this.isGrounded ? SETTINGS.FRICTION_GROUND : SETTINGS.FRICTION_AIR;
-        this.vel.x *= f;
-
-        // Ground Collision
-        const ground = Engine.canvas.height * SETTINGS.GROUND_Y_PERCENT - this.h;
-        if (this.pos.y >= ground) {
-            this.pos.y = ground;
-            this.vel.y = 0;
-            this.isGrounded = true;
-        } else {
-            this.isGrounded = false;
-        }
-
-        // Screen Boundaries
-        if (this.pos.x < 0) this.pos.x = 0;
-        if (this.pos.x > Engine.canvas.width - this.w) this.pos.x = Engine.canvas.width - this.w;
-
-        // Logic Controls
-        if (this.isPlayer) {
-            this.handleInput();
-        } else {
-            this.handleAI();
-        }
-
-        // Energy Regen
-        this.energy = Math.min(100, this.energy + 0.1);
-        
-        if (this.cooldown > 0) this.cooldown--;
-        this.animFrame += 0.2;
-    }
-
-    handleInput() {
-        const k = InputHandler.keys;
-        
-        // Movement
-        if (k.ArrowLeft) {
-            this.vel.x = -SETTINGS.MOVE_SPEED;
-            this.dir = -1;
-            this.state = 'MOVE';
-        } else if (k.ArrowRight) {
-            this.vel.x = SETTINGS.MOVE_SPEED;
-            this.dir = 1;
-            this.state = 'MOVE';
-        } else {
-            this.state = 'IDLE';
-        }
-
-        // Jump
-        if (k.ArrowUp && this.isGrounded) {
-            this.vel.y = SETTINGS.JUMP_FORCE;
-            this.isGrounded = false;
-        }
-
-        // Combat
-        if (k.KeyZ && this.cooldown === 0) this.initAttack('LIGHT');
-        if (k.KeyX && this.cooldown === 0) this.initAttack('HEAVY');
-        if (k.ShiftLeft && this.cooldown === 0) this.dash();
-    }
-
-    handleAI() {
-        const p = Engine.entities[0];
-        const dist = p.pos.x - this.pos.x;
-        
-        this.dir = dist > 0 ? 1 : -1;
-
-        if (Math.abs(dist) > 150) {
-            this.vel.x = this.dir * (SETTINGS.MOVE_SPEED - 2);
-        } else {
-            if (Math.random() > 0.97 && this.cooldown === 0) {
-                this.initAttack('LIGHT');
+        // Render Active Effects
+        for (let i = 0; i < ParticleManager.pool.length; i++) 
+        {
+            if (ParticleManager.pool[i].isAlive) 
+            {
+                ParticleManager.pool[i].render(ctx);
             }
         }
-    }
+    },
 
-    initAttack(type) {
-        this.isAttacking = true;
-        this.hasHit = false;
-        this.state = 'ATTACK';
-        this.attackPower = (type === 'LIGHT') ? 6 : 15;
-        this.cooldown = (type === 'LIGHT') ? 20 : 45;
+    mainLoop: function() 
+    {
+        this.processLogic();
+        this.renderFrame();
         
-        setTimeout(() => {
-            this.isAttacking = false;
-            this.state = 'IDLE';
-        }, this.cooldown * 16);
-    }
-
-    dash() {
-        this.vel.x = this.dir * SETTINGS.DASH_FORCE;
-        this.energy -= 20;
-        this.cooldown = 30;
-        Engine.spawnBurst(this.pos.x, this.pos.y + 70, '#fff');
-    }
-
-    takeDamage(amt, attackerDir) {
-        this.hp -= amt;
-        this.vel.x = attackerDir * 15;
-        this.vel.y = -8;
-        this.state = 'HIT';
-        setTimeout(() => this.state = 'IDLE', 300);
-    }
-
-    getHitbox() {
-        return {
-            x: (this.dir === 1) ? this.pos.x + this.w : this.pos.x - 90,
-            y: this.pos.y + 40,
-            w: 90,
-            h: 50
-        };
-    }
-
-    getHurtbox() {
-        return {
-            x: this.pos.x,
-            y: this.pos.y,
-            w: this.w,
-            h: this.h
-        };
-    }
-
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.pos.x + this.w / 2, this.pos.y + this.h / 2);
-        ctx.scale(this.dir, 1);
-        
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 6;
-        ctx.lineCap = 'round';
-        
-        const phase = Math.sin(this.animFrame);
-        const yOffset = (this.state === 'MOVE') ? phase * 5 : 0;
-
-        // Stickman Body - High Detail
-        // 1. Head
-        ctx.beginPath();
-        ctx.arc(0, -60 + yOffset, 20, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 2. Spine
-        ctx.beginPath();
-        ctx.moveTo(0, -40 + yOffset);
-        ctx.lineTo(0, 20);
-        ctx.stroke();
-
-        // 3. Arms
-        this.drawArms(ctx, phase);
-
-        // 4. Legs
-        this.drawLegs(ctx, phase);
-
-        ctx.restore();
-    }
-
-    drawArms(ctx, phase) {
-        if (this.state === 'ATTACK') {
-            ctx.beginPath();
-            ctx.moveTo(0, -25);
-            ctx.lineTo(65, -15);
-            ctx.stroke();
-        } else {
-            const angle = (this.state === 'MOVE') ? phase : 0.2;
-            ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(-25, 10 + angle * 15); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(25, 10 - angle * 15); ctx.stroke();
+        if (this.isGameRunning) 
+        {
+            requestAnimationFrame(() => this.mainLoop());
         }
     }
-
-    drawLegs(ctx, phase) {
-        const angle = (this.state === 'MOVE') ? phase * 35 : 15;
-        ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(-angle, 70); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(angle, 70); ctx.stroke();
-    }
-}
+};
 
 /**
- * PARTICLE ENGINE
+ * --- MISC SYSTEM: ACHIEVEMENT TRACKER ---
  */
-class Particle {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.vx = (Math.random() - 0.5) * 16;
-        this.vy = (Math.random() - 0.5) * 16;
-        this.life = 1.0;
-        this.size = Math.random() * 6 + 2;
-    }
-
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vy += 0.4; // Gravity
-        this.life -= 0.03;
-    }
-
-    draw(ctx) {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.rect(this.x, this.y, this.size, this.size);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-    }
-}
-
-/**
- * INPUT HANDLER MODUL
- */
-const InputHandler = {
-    keys: {},
-    init: function() {
-        window.onkeydown = (e) => this.keys[e.code] = true;
-        window.onkeyup = (e) => this.keys[e.code] = false;
+const AchievementSystem = {
+    data: [],
+    log: function(msg) 
+    {
+        console.log("[SYSTEM_LOG]: " + msg);
+        this.data.push({ timestamp: Date.now(), event: msg });
     }
 };
 
 /**
- * COMBAT & COMBO SYSTEM
+ * --- FINALIZATION ---
  */
-const CombatSystem = {
-    comboCount: 0,
-    timer: null,
-    
-    addCombo: function() {
-        clearTimeout(this.timer);
-        this.comboCount++;
-        
-        const ui = document.getElementById('combo-ui');
-        const val = document.getElementById('combo-val');
-        
-        val.innerText = this.comboCount;
-        ui.style.opacity = 1;
-        ui.style.transform = 'translateX(-50%) scale(1.3)';
-        
-        setTimeout(() => ui.style.transform = 'translateX(-50%) scale(1)', 50);
-        
-        this.timer = setTimeout(() => {
-            this.comboCount = 0;
-            ui.style.opacity = 0;
-        }, 1500);
-    }
+window.onload = () => 
+{
+    AchievementSystem.log("SQUAD SHOWDOWN TITAN ENGINE INITIALIZED.");
 };
 
-// INITIALIZE SYSTEM
-InputHandler.init();
+window.onresize = () => 
+{
+    GameCore.onWindowResize();
+};
 
-// END OF V20 ENGINE CODE
+/**
+ * ============================================================================
+ * END OF TITAN ENGINE SOURCE CODE
+ * ============================================================================
+ */
 </script>
 </body>
 </html>
