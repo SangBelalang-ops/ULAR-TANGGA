@@ -2,47 +2,30 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD HORROR V4 - FIX & AMBIENCE</title>
+    <title>SQUAD HORROR V5 - MOUSE CONTROL</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; cursor: none; }
-        /* Efek Grain/Noise biar kayak CCTV */
-        #noise { position: absolute; inset: 0; background: url('https://media.giphy.com/media/oEI9uWUqnW3Fe/giphy.gif'); opacity: 0.03; pointer-events: none; z-index: 6; }
-        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 20%, black 150%); pointer-events: none; z-index: 5; }
-        
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, black 150%); pointer-events: none; z-index: 5; }
         #ui { position: absolute; bottom: 30px; left: 30px; color: #800; font-size: 16px; z-index: 10; letter-spacing: 1px; }
-        #notes-count { position: absolute; top: 30px; right: 30px; color: #fff; font-size: 20px; z-index: 10; border-left: 5px solid #600; padding-left: 10px; }
-        
-        /* FIX: Jumpscare Tanpa Gambar Luar */
-        #jumpscare { 
-            position: absolute; inset: 0; background: #000; display: none; z-index: 1000; 
-            align-items: center; justify-content: center; overflow: hidden;
-        }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; }
+        #msg { position: absolute; top: 30%; width: 100%; text-align: center; color: #fff; font-size: 18px; z-index: 10; }
+        #jumpscare { position: absolute; inset: 0; background: #000; display: none; z-index: 1000; align-items: center; justify-content: center; }
         .scare-text { color: #f00; font-size: 100px; font-weight: 900; animation: shake 0.1s infinite; }
-        
-        @keyframes shake {
-            0% { transform: translate(5px, 5px) scale(1.1); filter: blur(2px); }
-            50% { transform: translate(-5px, -5px) scale(1.2); filter: blur(0px); }
-            100% { transform: translate(2px, -2px) scale(1.1); }
-        }
-
-        #msg { position: absolute; top: 20%; width: 100%; text-align: center; color: #fff; font-size: 18px; opacity: 0; z-index: 10; transition: 1s; }
+        @keyframes shake { 0% { transform: translate(5px,5px); } 50% { transform: translate(-5px,-5px); } 100% { transform: translate(0,0); } }
     </style>
 </head>
 <body>
 
 <div id="vignette"></div>
-<div id="noise"></div>
-<div id="notes-count">OBJECTIVE: <span id="nc">0</span>/5 DATA</div>
+<div id="crosshair"></div>
 <div id="ui">
-    SYSTEM: [ONLINE]<br>
+    SENTER: <span id="st">MATI</span> (PENCET 'E')<br>
     POWER: <span id="percent">100</span>%<br>
-    HEARTBEAT: <span id="hr">72</span> BPM
+    OBJECTIVE: <span id="nc">0</span>/5 DATA
 </div>
-<div id="msg">KLIK UNTUK MASUK KE AREA...</div>
+<div id="msg">KLIK UNTUK AKTIFKAN MOUSE & START...</div>
 
-<div id="jumpscare">
-    <div class="scare-text">MATI KAU!</div>
-</div>
+<div id="jumpscare"><div class="scare-text">MATI KAU!</div></div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -53,152 +36,158 @@
 
     let scene, camera, renderer, flashLight, player, clock, audioCtx;
     let keys = {}, battery = 100, isDead = false, notesFound = 0;
-    let enemy, enemyActive = false;
-    let items = [], ambientOsc;
+    let enemy, enemyActive = false, items = [], lightOn = false;
+
+    // --- MOUSE CONTROL SETUP ---
+    const pitch = new THREE.Object3D();
+    const yaw = new THREE.Object3D();
 
     window.onclick = () => {
-        if(!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            startAmbience(); // Cicil Audio: Suara Angin
+        if(!isPlaying) {
+            document.body.requestPointerLock();
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            init();
+        } else {
+            document.body.requestPointerLock();
         }
-        document.getElementById('msg').style.opacity = 1;
-        document.getElementById('msg').innerText = "CARI 5 DATA SEBELUM DIA MENEMUKANMU...";
-        setTimeout(() => document.getElementById('msg').style.opacity = 0, 4000);
-        if(!isPlaying) init();
     };
+
+    document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === document.body && !isDead) {
+            yaw.rotation.y -= e.movementX * 0.002;
+            pitch.rotation.x -= e.movementY * 0.002;
+            pitch.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch.rotation.x));
+        }
+    });
 
     let isPlaying = false;
     function init() {
         isPlaying = true;
+        document.getElementById('msg').style.display = 'none';
+        
         scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 12);
+        scene.fog = new THREE.Fog(0x000000, 1, 15);
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        
         player = new THREE.Group();
-        player.add(camera);
-        player.position.set(0, 1.6, 25); // Posisi awal aman
+        player.position.set(0, 1.6, 25);
         scene.add(player);
+        
+        player.add(yaw);
+        yaw.add(pitch);
+        pitch.add(camera);
 
-        flashLight = new THREE.SpotLight(0xfff5ee, 12, 18, Math.PI/6, 1, 2);
-        player.add(flashLight);
-        player.add(flashLight.target);
+        // SENTER (Ditempel di kamera)
+        flashLight = new THREE.SpotLight(0xffffff, 0, 20, Math.PI/6, 0.5, 1);
+        pitch.add(flashLight);
+        flashLight.position.set(0, 0, 0);
         flashLight.target.position.set(0, 0, -1);
+        pitch.add(flashLight.target);
+
+        // AMBIENT LIGHT (Biar gak gelap gulita banget)
+        const amb = new THREE.AmbientLight(0xffffff, 0.05); 
+        scene.add(amb);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         clock = new THREE.Clock();
-        
         createMaze();
         spawnEnemy();
-        spawnDataPads();
+        spawnData();
         animate();
     }
 
-    // --- CICIL KODE: AUDIO AMBIENCE ---
-    function startAmbience() {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'brown'; // Suara angin/low noise
-        osc.frequency.setValueAtTime(40, audioCtx.currentTime);
-        g.gain.value = 0.05;
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start();
-    }
-
     function createMaze() {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x080808 });
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x020202}));
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
         floor.rotation.x = -Math.PI/2;
         scene.add(floor);
 
-        // Labirin lebih rapat (2000 lines cicilan part 1)
-        for(let i=0; i<60; i++) {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 0.5), wallMat);
-            wall.position.set(Math.floor(Math.random()*40-20), 3, Math.floor(Math.random()*40-20));
+        for(let i=0; i<50; i++) {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 0.5), new THREE.MeshStandardMaterial({color: 0x111111}));
+            wall.position.set(Math.random()*40-20, 2.5, Math.random()*40-20);
             if(Math.random() > 0.5) wall.rotation.y = Math.PI/2;
             scene.add(wall);
         }
     }
 
     function spawnEnemy() {
-        const stalkerGeo = new THREE.CylinderGeometry(0.5, 0.5, 3, 8);
-        const stalkerMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        enemy = new THREE.Mesh(stalkerGeo, stalkerMat);
-        enemy.position.set(-25, 1.5, -25);
+        enemy = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshBasicMaterial({color: 0x000000}));
+        enemy.position.set(-20, 1.5, -20);
         scene.add(enemy);
-        setTimeout(() => { enemyActive = true; }, 8000); // 8 detik waktu buat lari
+        setTimeout(() => { enemyActive = true; }, 5000);
     }
 
-    function spawnDataPads() {
-        const dataGeo = new THREE.BoxGeometry(0.4, 0.1, 0.6);
-        const dataMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff, emissive: 0x00d4ff });
+    function spawnData() {
         for(let i=0; i<5; i++) {
-            const pad = new THREE.Mesh(dataGeo, dataMat);
-            pad.position.set(Math.random()*40-20, 0.2, Math.random()*40-20);
+            const pad = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), new THREE.MeshBasicMaterial({color: 0x00d4ff}));
+            pad.position.set(Math.random()*30-15, 0.1, Math.random()*30-15);
             scene.add(pad);
             items.push(pad);
         }
     }
 
-    window.onkeydown = (e) => keys[e.code] = true;
+    window.onkeydown = (e) => {
+        keys[e.code] = true;
+        // Tombol E Nyalain/Matiin Senter
+        if(e.code === 'KeyE' && !isDead && battery > 0) {
+            lightOn = !lightOn;
+            document.getElementById('st').innerText = lightOn ? "NYALA" : "MATI";
+            document.getElementById('st').style.color = lightOn ? "#0f0" : "#800";
+        }
+    };
     window.onkeyup = (e) => keys[e.code] = false;
 
-    function handleMovement() {
+    function handleUpdate() {
         if(isDead) return;
-        const speed = 0.08;
-        if(keys['KeyW']) player.translateZ(-speed);
-        if(keys['KeyS']) player.translateZ(speed);
-        if(keys['KeyA']) player.translateX(-speed);
-        if(keys['KeyD']) player.translateX(speed);
-        if(keys['KeyQ']) player.rotation.y += 0.04;
-        if(keys['KeyE']) player.rotation.y -= 0.04;
+        const delta = clock.getDelta();
+        const moveDir = new THREE.Vector3();
+        
+        if(keys['KeyW']) moveDir.z -= 1;
+        if(keys['KeyS']) moveDir.z += 1;
+        if(keys['KeyA']) moveDir.x -= 1;
+        if(keys['KeyD']) moveDir.x += 1;
+        
+        moveDir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(0.1);
+        player.position.add(moveDir);
 
-        // Ambil Data
-        items.forEach((pad, idx) => {
-            if(player.position.distanceTo(pad.position) < 1.5) {
-                scene.remove(pad);
-                items.splice(idx, 1);
+        // Baterai Logic
+        if(lightOn && battery > 0) {
+            battery -= 0.02;
+            flashLight.intensity = (Math.random() > 0.99) ? 0 : 15;
+            document.getElementById('percent').innerText = Math.max(0, Math.floor(battery));
+        } else {
+            flashLight.intensity = 0;
+            if(battery <= 0) lightOn = false;
+        }
+
+        // Ambil Item
+        items.forEach((p, i) => {
+            if(player.position.distanceTo(p.position) < 1.5) {
+                scene.remove(p); items.splice(i,1);
                 notesFound++;
                 document.getElementById('nc').innerText = notesFound;
-                if(notesFound === 5) { alert("SQUAD SURVIVED! SEMUA DATA DIAMANKAN."); location.reload(); }
             }
         });
-    }
 
-    function handleEnemy() {
-        if(!enemyActive || isDead) return;
-        const dist = player.position.distanceTo(enemy.position);
-        const dir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-        
-        // AI: Makin banyak data, makin gila ngejarnya
-        enemy.position.add(dir.multiplyScalar(0.03 + (notesFound * 0.015)));
-        
-        document.getElementById('hr').innerText = Math.floor(70 + (12/dist)*30);
-
-        if(dist < 1.4) {
-            isDead = true;
-            document.getElementById('jumpscare').style.display = 'flex';
-            // Suara Teriak Statis (Cicil Audio Part 2)
-            const osc = audioCtx.createOscillator();
-            osc.type = 'sawtooth'; osc.frequency.value = 100;
-            osc.connect(audioCtx.destination); osc.start();
-            setTimeout(() => location.reload(), 3000);
+        // Enemy AI
+        if(enemyActive) {
+            const dist = player.position.distanceTo(enemy.position);
+            const dir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
+            enemy.position.add(dir.multiplyScalar(0.035));
+            if(dist < 1.5) {
+                isDead = true;
+                document.getElementById('jumpscare').style.display = 'flex';
+                setTimeout(() => location.reload(), 3000);
+            }
         }
     }
 
     function animate() {
         if(!isDead) requestAnimationFrame(animate);
-        handleMovement();
-        handleEnemy();
-        
-        // Battery Flicker
-        battery -= 0.015;
-        document.getElementById('percent').innerText = Math.max(0, Math.floor(battery));
-        if(battery > 0) flashLight.intensity = (Math.random() > 0.98) ? 0 : 12;
-        else flashLight.intensity = 0;
-
+        handleUpdate();
         renderer.render(scene, camera);
     }
 </script>
