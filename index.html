@@ -2,35 +2,17 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD HORROR V12 - REAL MAP</title>
+    <title>SQUAD HORROR V13 - STEALTH</title>
     <style>
-        :root { --blood: #800; --neon: #00d4ff; --radar: #0f0; }
+        :root { --blood: #800; --neon: #00d4ff; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; user-select: none; }
-        
-        /* VISUAL FX */
-        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, black 150%); pointer-events: none; z-index: 10; }
-        
-        /* HUD */
+        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 30%, black 150%); pointer-events: none; z-index: 10; }
         #hud { position: absolute; inset: 0; pointer-events: none; z-index: 20; padding: 20px; }
         .stat { background: rgba(0,0,0,0.8); padding: 5px 10px; border-left: 3px solid var(--blood); margin-bottom: 5px; display: inline-block;}
-        
-        /* NEW: MINI-MAP (PRO EDITION) */
-        #map-container { 
-            position: absolute; top: 20px; right: 20px; 
-            width: 160px; height: 160px; 
-            background: rgba(0,15,0,0.6); /* Hijau radar jadul */
-            border: 2px solid #0a0; 
-            z-index: 30; overflow: hidden; 
-            box-shadow: 0 0 10px rgba(0,255,0,0.3);
-        }
-        /* Penanda Player di Peta */
+        #map-container { position: absolute; top: 20px; right: 20px; width: 160px; height: 160px; background: rgba(0,10,0,0.7); border: 2px solid #060; z-index: 30; overflow: hidden; }
         #map-player { position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); z-index: 50; }
-        
-        /* Penanda Hantu di Peta (NEW) */
-        #map-enemy { position: absolute; width: 6px; height: 6px; background: red; border-radius: 50%; transform: translate(-50%, -50%); z-index: 45; display: none; box-shadow: 0 0 5px red; }
-
-        /* SCREENS */
-        #msg { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 20px; z-index: 100; text-shadow: 0 0 10px var(--neon); }
+        #stamina-box { width: 150px; height: 8px; background: #222; border: 1px solid #444; margin-top: 5px; }
+        #stam-fill { width: 100%; height: 100%; background: #2ecc71; transition: 0.1s; }
         #jumpscare { position: absolute; inset: 0; background: #000; display: none; z-index: 1000; align-items: center; justify-content: center; color: red; font-size: 50px; font-weight: 900; animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } }
     </style>
@@ -38,20 +20,16 @@
 <body>
 
 <div id="vignette"></div>
-
-<div id="map-container">
-    <div id="map-player"></div>
-    <div id="map-enemy"></div>
-    </div>
+<div id="map-container"><div id="map-player"></div></div>
 
 <div id="hud">
     <div class="stat">DATA: <span id="dc">0</span>/5</div><br>
     <div class="stat">BATTERY: <span id="bat">100</span>% (E)</div><br>
+    <div class="stat">STAMINA (SHIFT):<div id="stamina-box"><div id="stam-fill"></div></div></div><br>
     <div class="stat">BPM: <span id="bpm">72</span></div>
 </div>
 
-<div id="msg">KLIK LAYAR UNTUK MULAI<br><span style="font-size:14px;color:#888;">PERHATIKAN PETA LABIRIN DI KANAN ATAS</span></div>
-<div id="jumpscare">THE STALKER GOT YOU</div>
+<div id="jumpscare">DEAD END</div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -62,21 +40,16 @@
 
     let scene, camera, renderer, clock, player, flashLight, audioCtx;
     let yaw = new THREE.Object3D(), pitch = new THREE.Object3D();
-    let keys = {}, items = [], wallBoxes = [], wallMeshes = [];
-    let mapDataDots = [], mapWallDivs = [];
-    let battery = 100, dataFound = 0, isDead = false;
+    let keys = {}, items = [], wallBoxes = [], mapDataDots = [];
+    let battery = 100, stamina = 100, dataFound = 0, isDead = false;
     let enemy, enemyActive = false, canToggle = true;
 
-    // --- MAP CONFIG (Fixed Koordinat Dunia ke Pixel) ---
-    const WORLD_SIZE = 40; // Area Operasional (setengah MAP_SIZE)
-    const MAP_PIXEL_SIZE = 160; // Ukuran container CSS (width/height)
-    const MAP_SCALE = MAP_PIXEL_SIZE / (WORLD_SIZE * 2); // Pixel per unit dunia
+    const WORLD_SIZE = 40; 
+    const MAP_SCALE = 160 / (WORLD_SIZE * 2);
 
-    // --- START ENGINE ---
     window.onclick = () => {
         if(!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            document.getElementById('msg').style.display = 'none';
             init();
         }
         document.body.requestPointerLock();
@@ -84,7 +57,7 @@
 
     function init() {
         scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 16); // Fog sedeng
+        scene.fog = new THREE.Fog(0x000000, 1, 15);
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         player = new THREE.Group();
@@ -92,213 +65,151 @@
         scene.add(player);
         player.add(yaw); yaw.add(pitch); pitch.add(camera);
 
-        flashLight = new THREE.SpotLight(0xffffff, 0, 22, Math.PI/7, 0.4, 1);
+        // FIX SENTER: Arahnya ngikut kamera 100%
+        flashLight = new THREE.SpotLight(0xffffff, 0, 25, Math.PI/6, 0.4, 1);
         pitch.add(flashLight);
         flashLight.target.position.set(0, 0, -1);
         pitch.add(flashLight.target);
 
-        // Brightness sedeng
-        scene.add(new THREE.AmbientLight(0xffffff, 0.05));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.04));
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         clock = new THREE.Clock();
-        
-        // --- BUAT LABIRIN & PETA DINDING (NEW) ---
-        buildWorldAndMap();
-        spawnItemsAndMapDots();
-        spawnRedEyedStalker();
+        buildMaze();
+        spawnItems();
+        spawnStalker();
 
-        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === document.body && !isDead) {
+                yaw.rotation.y -= e.movementX * 0.002;
+                pitch.rotation.x -= e.movementY * 0.002;
+                pitch.rotation.x = Math.max(-1.4, Math.min(1.4, pitch.rotation.x));
+            }
+        });
+
         animate();
     }
 
-    function onMouseMove(e) {
-        if (document.pointerLockElement === document.body && !isDead) {
-            yaw.rotation.y -= e.movementX * 0.002;
-            pitch.rotation.x -= e.movementY * 0.002;
-            pitch.rotation.x = Math.max(-1.4, Math.min(1.4, pitch.rotation.x));
-        }
-    }
-
-    // --- NEW: BUAT DUNIA + DIV DINDING DI PETA ---
-    function buildWorldAndMap() {
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x060606}));
+    function buildMaze() {
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
-        const wallSize = 4;
-        const wallGeo = new THREE.BoxGeometry(wallSize, 5, wallSize);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const wallGeo = new THREE.BoxGeometry(4, 5, 4);
         const mapCont = document.getElementById('map-container');
 
-        // Taruh dinding labirin (50 Tembok)
-        for(let i=0; i<50; i++) {
+        for(let i=0; i<45; i++) {
             const wall = new THREE.Mesh(wallGeo, wallMat);
             const rx = Math.floor(Math.random()*(WORLD_SIZE*2) - WORLD_SIZE);
             const rz = Math.floor(Math.random()*(WORLD_SIZE*2) - WORLD_SIZE);
-            
-            // JANGAN SPAWN DEKET PLAYER
             if(Math.abs(rx) < 5 && Math.abs(rz - 15) < 5) continue;
 
             wall.position.set(rx, 2.5, rz);
             scene.add(wall);
             wallBoxes.push(new THREE.Box3().setFromObject(wall));
             
-            // --- NEW: BIKIN REPRESENTASI DINDING DI PETA CSS ---
-            const wallDot = document.createElement('div');
-            wallDot.style.cssText = `position:absolute; width:${wallSize * MAP_SCALE}px; height:${wallSize * MAP_SCALE}px; background:#444;`;
-            
-            // Convert Koordinat Tembok (rx,rz) -> Pixel Peta
-            const wallX = (rx + WORLD_SIZE) * MAP_SCALE;
-            const wallZ = (rz + WORLD_SIZE) * MAP_SCALE;
-            
-            // CSS `left`/`top` adalah pojok kiri atas dinding
-            wallDot.style.left = wallX + 'px';
-            wallDot.style.top = wallZ + 'px';
-            mapCont.appendChild(wallDot);
-            mapWallDivs.push(wallDot);
+            // Peta Dinding
+            const wd = document.createElement('div');
+            wd.style.cssText = `position:absolute; width:8px; height:8px; background:#222; left:${(rx+WORLD_SIZE)*MAP_SCALE}px; top:${(rz+WORLD_SIZE)*MAP_SCALE}px;`;
+            mapCont.appendChild(wd);
+
+            // OBOR (Remang-remang)
+            if(Math.random() > 0.7) {
+                const torch = new THREE.PointLight(0xff6600, 1.5, 7);
+                torch.position.set(rx, 3, rz + 2.1);
+                scene.add(torch);
+            }
         }
     }
 
-    function spawnItemsAndMapDots() {
-        const geo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    function spawnItems() {
+        const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
         const mat = new THREE.MeshStandardMaterial({ color: 0x00d4ff, emissive: 0x00d4ff, emissiveIntensity: 2 });
         const mapCont = document.getElementById('map-container');
-
         for(let i=0; i<5; i++) {
             const p = new THREE.Mesh(geo, mat);
-            const rx = Math.random()*(WORLD_SIZE*2-6) - (WORLD_SIZE-3);
-            const rz = Math.random()*(WORLD_SIZE*2-6) - (WORLD_SIZE-3);
+            const rx = Math.random()*70-35, rz = Math.random()*70-35;
             p.position.set(rx, 1.2, rz);
-            scene.add(p);
-            items.push(p);
+            scene.add(p); items.push(p);
 
-            // BIKIN TITIK BIRU DATA DI PETA
             const dot = document.createElement('div');
-            dot.style.cssText = `position:absolute; width:4px; height:4px; background:#00d4ff; border-radius:50%; transform:translate(-50%,-50%); z-index:35;`;
-            
-            // Convert Koordinat Item (rx,rz) -> Pixel Peta
-            const dX = (rx + WORLD_SIZE) * MAP_SCALE;
-            const dZ = (rz + WORLD_SIZE) * MAP_SCALE;
-            
-            dot.style.left = dX + 'px';
-            dot.style.top = dZ + 'px';
+            dot.style.cssText = `position:absolute; width:4px; height:4px; background:#00d4ff; border-radius:50%; left:${(rx+WORLD_SIZE)*MAP_SCALE}px; top:${(rz+WORLD_SIZE)*MAP_SCALE}px;`;
             mapCont.appendChild(dot);
             mapDataDots.push({mesh: p, dotEl: dot});
         }
     }
 
-    // --- NEW: STALKER DENGAN TITIK PETA MERAH ---
-    function spawnRedEyedStalker() {
+    function spawnStalker() {
         enemy = new THREE.Group();
-        
-        // Body
-        const body = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.5, 0.5, 3.2), 
-            new THREE.MeshBasicMaterial({color: 0x000000})
-        );
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshBasicMaterial({color: 0x000000}));
         enemy.add(body);
-
         // MATA MERAH
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const eyes = new THREE.Group();
-        for(let j=0; j<2; j++) {
-            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 8), eyeMat);
-            eye.position.set((j-0.5)*0.4, 1.2, -0.45);
-            eyes.add(eye);
-        }
-        enemy.add(eyes);
-
-        enemy.position.set(-18, 1.6, -18); // Spawn jauh
+        const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.1), eyeMat); e1.position.set(-0.2, 1.2, -0.45);
+        const e2 = new THREE.Mesh(new THREE.SphereGeometry(0.1), eyeMat); e2.position.set(0.2, 1.2, -0.45);
+        enemy.add(e1); enemy.add(e2);
+        enemy.position.set(-20, 1.5, -20);
         scene.add(enemy);
         setTimeout(() => enemyActive = true, 5000);
     }
 
-    // --- CORE LOOP ---
     function update() {
         if(isDead) return;
         const delta = clock.getDelta();
 
-        // Movement (Fixed Collision sedeng)
-        const speed = 0.09;
+        // SPRINT LOGIC
+        const isSprint = keys['ShiftLeft'] && stamina > 0 && (keys['KeyW']||keys['KeyS']);
+        const speed = isSprint ? 0.18 : 0.08;
+        if(isSprint) stamina -= 0.5; else stamina = Math.min(100, stamina + 0.2);
+        document.getElementById('stam-fill').style.width = stamina + "%";
+
         const dir = new THREE.Vector3();
         if(keys['KeyW']) dir.z -= 1; if(keys['KeyS']) dir.z += 1;
         if(keys['KeyA']) dir.x -= 1; if(keys['KeyD']) dir.x += 1;
 
         if(dir.length() > 0) {
             dir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(speed);
-            
-            const nextPos = player.position.clone().add(dir);
-            const pBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.7, 1.8, 0.7));
-            let collide = false;
-            for(let box of wallBoxes) { if(pBox.intersectsBox(box)) { collide = true; break; } }
-            if(!collide) player.position.copy(nextPos);
+            const next = player.position.clone().add(dir);
+            const pBox = new THREE.Box3().setFromCenterAndSize(next, new THREE.Vector3(0.7, 1.8, 0.7));
+            let hit = false;
+            for(let b of wallBoxes) { if(pBox.intersectsBox(b)) { hit = true; break; } }
+            if(!hit) player.position.copy(next);
         }
 
-        // --- NEW: UPDATE REAL-TIME PETA (Player, Hantu, Items) ---
-        const mapP = document.getElementById('map-player');
-        // Convert Three.js pos Player (x,z) Dunia -> Pixel Peta CSS
-        const mapX = (player.position.x + WORLD_SIZE) * MAP_SCALE;
-        const mapZ = (player.position.z + WORLD_SIZE) * MAP_SCALE;
-        mapP.style.left = mapX + 'px';
-        mapP.style.top = mapZ + 'px';
+        // UPDATE MAP
+        document.getElementById('map-player').style.left = (player.position.x + WORLD_SIZE) * MAP_SCALE + 'px';
+        document.getElementById('map-player').style.top = (player.position.z + WORLD_SIZE) * MAP_SCALE + 'px';
 
-        // Update Posisi Hantu di Peta (NEW)
-        if(enemy) {
-            const mapE = document.getElementById('map-enemy');
-            if(enemyActive) mapE.style.display = 'block';
-            
-            const eX = (enemy.position.x + WORLD_SIZE) * MAP_SCALE;
-            const eZ = (enemy.position.z + WORLD_SIZE) * MAP_SCALE;
-            mapE.style.left = eX + 'px';
-            mapE.style.top = eZ + 'px';
-        }
-
-        // Flashlight 'E' logic
+        // FLASHLIGHT 'E'
         if(keys['KeyE'] && canToggle) {
-            flashLight.intensity = (flashLight.intensity > 0) ? 0 : 18;
+            flashLight.intensity = (flashLight.intensity > 0) ? 0 : 20;
             canToggle = false; setTimeout(()=>canToggle=true, 300);
         }
-
         if(flashLight.intensity > 0) {
-            battery -= 0.02;
-            document.getElementById('bat').innerText = Math.floor(battery);
+            battery -= 0.02; document.getElementById('bat').innerText = Math.floor(battery);
             if(battery <= 0) flashLight.intensity = 0;
         }
 
-        // Pickup Data
+        // PICKUP
         items.forEach((it, i) => {
-            it.rotation.y += 0.05;
             if(player.position.distanceTo(it.position) < 1.5) {
                 scene.remove(it); items.splice(i, 1);
                 dataFound++; document.getElementById('dc').innerText = dataFound;
-                
-                // Hapus dot di peta CSS
-                const dotIdx = mapDataDots.findIndex(d => d.mesh === it);
-                if(dotIdx !== -1) {
-                    mapDataDots[dotIdx].dotEl.remove();
-                    mapDataDots.splice(dotIdx, 1);
-                }
+                mapDataDots[i].dotEl.remove(); mapDataDots.splice(i, 1);
             }
         });
 
-        // Enemy AI (Red Eyes)
+        // ENEMY
         if(enemyActive) {
             enemy.lookAt(player.position);
             const dist = player.position.distanceTo(enemy.position);
-            const eDir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-            
-            // Speed scaling
-            let eSpeed = 0.035 + (dataFound * 0.015);
-            enemy.position.add(eDir.multiplyScalar(eSpeed));
-            
-            document.getElementById('bpm').innerText = Math.floor(70 + (10/dist)*30);
-            
+            enemy.position.add(new THREE.Vector3().subVectors(player.position, enemy.position).normalize().multiplyScalar(0.04));
+            document.getElementById('bpm').innerText = Math.floor(70 + (10/dist)*40);
             if(dist < 1.4) {
-                isDead = true;
-                document.getElementById('jumpscare').style.display = 'flex';
+                isDead = true; document.getElementById('jumpscare').style.display = 'flex';
                 setTimeout(() => location.reload(), 3000);
             }
         }
