@@ -2,28 +2,51 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD HORROR V10 - BUG FIXED</title>
+    <title>SQUAD HORROR V11 - LIGHT & MAP</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        #hud { position: absolute; inset: 0; pointer-events: none; z-index: 100; color: #f00; padding: 20px; font-weight: bold; }
-        .bar { width: 200px; height: 10px; background: #222; border: 1px solid #444; margin: 5px 0; }
-        #stam-bar { width: 100%; height: 100%; background: #0f0; transition: 0.1s; }
-        #msg { position: absolute; top: 40%; width: 100%; text-align: center; color: white; font-size: 20px; z-index: 100; }
+        :root { --blood: #800; --neon: #00d4ff; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
+        
+        /* VISUAL FX */
+        #vignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, black 150%); pointer-events: none; z-index: 10; }
+        
+        /* HUD */
+        #hud { position: absolute; inset: 0; pointer-events: none; z-index: 20; padding: 20px; }
+        .stat { background: rgba(0,0,0,0.7); padding: 5px 10px; border-left: 3px solid var(--blood); margin-bottom: 5px; display: inline-block;}
+        
+        /* PETA / MINI-MAP (NEW) */
+        #map-container { 
+            position: absolute; top: 20px; right: 20px; 
+            width: 150px; height: 150px; 
+            background: rgba(0,20,0,0.5); /* Hijau radar jadul */
+            border: 2px solid #0f0; 
+            z-index: 30; overflow: hidden;
+        }
+        #map-player { position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); }
+        /* Dot data di peta bakal dibuat lewat JS */
+
+        /* SCREENS */
+        #msg { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 20px; z-index: 100; }
         #jumpscare { position: absolute; inset: 0; background: #000; display: none; z-index: 1000; align-items: center; justify-content: center; color: red; font-size: 50px; font-weight: 900; animation: shake 0.1s infinite; }
         @keyframes shake { 0% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } }
     </style>
 </head>
 <body>
 
+<div id="vignette"></div>
+
+<div id="map-container">
+    <div id="map-player"></div>
+    </div>
+
 <div id="hud">
-    DATA COLLECTED: <span id="dc">0</span>/5<br>
-    STAMINA: <div class="bar"><div id="stam-bar"></div></div>
-    BATTERY: <span id="bat">100</span>%<br>
-    BPM: <span id="bpm">72</span>
+    <div class="stat">DATA: <span id="dc">0</span>/5</div><br>
+    <div class="stat">BATTERY: <span id="bat">100</span>% (E)</div><br>
+    <div class="stat">BPM: <span id="bpm">72</span></div>
 </div>
 
-<div id="msg">KLIK LAYAR UNTUK START (STABILIZED)</div>
-<div id="jumpscare">ERROR: SYSTEM BREACHED</div>
+<div id="msg">KLIK LAYAR UNTUK MULAI<br><span style="font-size:14px;color:#888;">CARI TITIK BIRU DI PETA</span></div>
+<div id="jumpscare">MATA MERAH MENGAWASIMU</div>
 
 <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -34,9 +57,13 @@
 
     let scene, camera, renderer, clock, player, flashLight, audioCtx;
     let yaw = new THREE.Object3D(), pitch = new THREE.Object3D();
-    let keys = {}, items = [], wallBoxes = [];
-    let battery = 100, stamina = 100, dataFound = 0, isDead = false;
+    let keys = {}, items = [], wallBoxes = [], mapDots = [];
+    let battery = 100, dataFound = 0, isDead = false;
     let enemy, enemyActive = false, canToggle = true;
+
+    // --- MAP CONFIG ---
+    const MAP_SIZE = 40; // Ukuran area operasional
+    const MINIMAP_SCALE = 150 / MAP_SIZE; // Pixel per unit Three.js
 
     // --- START ENGINE ---
     window.onclick = () => {
@@ -50,19 +77,22 @@
 
     function init() {
         scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 15);
+        scene.fog = new THREE.Fog(0x000000, 1, 18); // Fog dijauhain dikit
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         player = new THREE.Group();
-        player.position.set(0, 1.6, 20);
+        player.position.set(0, 1.6, 18);
         scene.add(player);
         player.add(yaw); yaw.add(pitch); pitch.add(camera);
 
-        // Flashlight (Stronger Beam)
-        flashLight = new THREE.SpotLight(0xffffff, 0, 20, Math.PI/6, 0.5, 1);
+        // Flashlight (Strong & Focused)
+        flashLight = new THREE.SpotLight(0xffffff, 0, 25, Math.PI/7, 0.4, 1);
         pitch.add(flashLight);
         flashLight.target.position.set(0, 0, -1);
         pitch.add(flashLight.target);
+
+        // --- BRIGHTNESS UP ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.06)); // Lebih terang dari sebelumnya
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -70,132 +100,197 @@
 
         clock = new THREE.Clock();
         
-        // --- FIX: BETTER COLLISION BOXES ---
-        buildMaze();
+        buildMazeWithTorches();
         spawnData();
-        spawnStalker();
+        spawnRedEyedStalker();
 
-        document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === document.body && !isDead) {
-                yaw.rotation.y -= e.movementX * 0.002;
-                pitch.rotation.x -= e.movementY * 0.002;
-                pitch.rotation.x = Math.max(-1.4, Math.min(1.4, pitch.rotation.x));
-            }
-        });
-
+        document.addEventListener('mousemove', onMouseMove);
         animate();
     }
 
-    function buildMaze() {
-        // Lantai
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x050505}));
+    function onMouseMove(e) {
+        if (document.pointerLockElement === document.body && !isDead) {
+            yaw.rotation.y -= e.movementX * 0.002;
+            pitch.rotation.x -= e.movementY * 0.002;
+            pitch.rotation.x = Math.max(-1.4, Math.min(1.4, pitch.rotation.x));
+        }
+    }
+
+    // --- NEW: MAZE + OBOR DINDING ---
+    function buildMazeWithTorches() {
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x080808}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.02));
 
         const wallGeo = new THREE.BoxGeometry(4, 5, 4);
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 1 });
+
+        // OBOR / TORCH SETUP
+        const torchGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
+        const torchMat = new THREE.MeshBasicMaterial({ color: 0x630 }); // Kayu coklat
 
         for(let i=0; i<45; i++) {
             const wall = new THREE.Mesh(wallGeo, wallMat);
-            const rx = Math.floor(Math.random()*40-20);
-            const rz = Math.floor(Math.random()*40-20);
+            const rx = Math.floor(Math.random()*MAP_SIZE - MAP_SIZE/2);
+            const rz = Math.floor(Math.random()*MAP_SIZE - MAP_SIZE/2);
             
-            // JANGAN SPAWN DEKET PLAYER (Fix Bug Awal Mati)
-            if(Math.abs(rx) < 5 && Math.abs(rz - 20) < 5) continue;
+            // Safe spawn
+            if(Math.abs(rx) < 5 && Math.abs(rz - 18) < 5) continue;
 
             wall.position.set(rx, 2.5, rz);
             scene.add(wall);
-            // Simpan box collision
-            const box = new THREE.Box3().setFromObject(wall);
-            wallBoxes.push(box);
-        }
-    }
+            wallBoxes.push(new THREE.Box3().setFromObject(wall));
 
-    // --- FIX: PERGERAKAN ANTI-TEMBUS ---
-    function movePlayer(dir) {
-        const nextPos = player.position.clone().add(dir);
-        const playerBox = new THREE.Box3().setFromCenterAndSize(
-            nextPos, new THREE.Vector3(0.7, 1.8, 0.7)
-        );
+            // PASANG OBOR (Random di beberapa tembok)
+            if(Math.random() > 0.7) {
+                const torch = new THREE.Mesh(torchGeo, torchMat);
+                // Taruh di sisi tembok
+                torch.position.set(rx, 2.5, rz + 2.01); 
+                scene.add(torch);
 
-        let collision = false;
-        for(let box of wallBoxes) {
-            if(playerBox.intersectsBox(box)) {
-                collision = true; break;
+                // Cahaya Obor (PointLight orange hangat)
+                const torchLight = new THREE.PointLight(0xffaa44, 2, 8);
+                torchLight.position.set(rx, 2.8, rz + 2.2);
+                scene.add(torchLight);
             }
         }
-        if(!collision) player.position.copy(nextPos);
     }
 
-    function spawnData() {
-        const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const mat = new THREE.MeshBasicMaterial({ color: 0x00d4ff });
-        for(let i=0; i<5; i++) {
-            const p = new THREE.Mesh(geo, mat);
-            p.position.set(Math.random()*30-15, 1, Math.random()*30-15);
-            scene.add(p);
-            items.push(p);
-        }
-    }
+    // --- NEW: HANTU MATA MERAH ---
+    function spawnRedEyedStalker() {
+        enemy = new THREE.Group();
+        
+        // Body (Siluet Hitam)
+        const body = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.5, 3.2), 
+            new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.9})
+        );
+        enemy.add(body);
 
-    function spawnStalker() {
-        enemy = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), new THREE.MeshBasicMaterial({color: 0x000000}));
-        enemy.position.set(-20, 1.5, -20);
+        // MATA MERAH (Menyala/Emissive)
+        const eyeGeo = new THREE.SphereGeometry(0.08, 16, 8);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Merah Terang
+        
+        const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+        leftEye.position.set(-0.2, 1.2, -0.45); // Posisi mata di muka
+        enemy.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+        rightEye.position.set(0.2, 1.2, -0.45);
+        enemy.add(rightEye);
+
+        // Cahaya mata (tipis biar ngeri)
+        const eyeLight = new THREE.PointLight(0xff0000, 1, 3);
+        eyeLight.position.set(0, 1.2, -0.6);
+        enemy.add(eyeLight);
+
+        enemy.position.set(-18, 1.6, -18);
         scene.add(enemy);
         setTimeout(() => enemyActive = true, 5000);
     }
 
+    function spawnData() {
+        const geo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x00d4ff, emissive: 0x00d4ff, emissiveIntensity: 2 });
+        const mapCont = document.getElementById('map-container');
+
+        for(let i=0; i<5; i++) {
+            const p = new THREE.Mesh(geo, mat);
+            const rx = Math.random()*(MAP_SIZE-4) - (MAP_SIZE/2-2);
+            const rz = Math.random()*(MAP_SIZE-4) - (MAP_SIZE/2-2);
+            p.position.set(rx, 1.2, rz);
+            scene.add(p);
+            items.push(p);
+
+            // BIKIN TITIK DI PETA (Mini-map DOTS)
+            const dot = document.createElement('div');
+            dot.style.cssText = `position:absolute; width:4px; height:4px; background:#00d4ff; border-radius:50%; transform:translate(-50%,-50%);`;
+            mapCont.appendChild(dot);
+            mapDots.push({mesh: p, dotEl: dot});
+        }
+    }
+
+    // --- CORE LOGIC ---
     function update() {
         if(isDead) return;
         const delta = clock.getDelta();
 
-        // Stamina & Speed logic
-        const sprinting = keys['ShiftLeft'] && stamina > 0 && keys['KeyW'];
-        const speed = sprinting ? 0.2 : 0.08;
-        if(sprinting) stamina -= 0.6; else stamina = Math.min(100, stamina + 0.2);
-        document.getElementById('stam-bar').style.width = stamina + "%";
-
+        // Movement (Fixed Collision)
+        const speed = 0.09;
         const dir = new THREE.Vector3();
         if(keys['KeyW']) dir.z -= 1; if(keys['KeyS']) dir.z += 1;
         if(keys['KeyA']) dir.x -= 1; if(keys['KeyD']) dir.x += 1;
 
         if(dir.length() > 0) {
             dir.normalize().applyQuaternion(yaw.quaternion).multiplyScalar(speed);
-            movePlayer(dir);
+            
+            // Collision Check
+            const nextPos = player.position.clone().add(dir);
+            const pBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.7, 1.8, 0.7));
+            let collide = false;
+            for(let box of wallBoxes) { if(pBox.intersectsBox(box)) { collide = true; break; } }
+            if(!collide) player.position.copy(nextPos);
         }
 
-        // FIX: Toggle Flashlight 'E' Anti-Double Click
-        if(keys['KeyE']) {
-            if(canToggle) {
-                const on = flashLight.intensity > 0;
-                flashLight.intensity = on ? 0 : 15;
-                canToggle = false;
-                setTimeout(() => canToggle = true, 300); // Cooldown 300ms
-            }
+        // UPDATE MINI-MAP (NEW)
+        const mapP = document.getElementById('map-player');
+        // Convert Three.js pos to Minimap CSS pos
+        // Center map is (0,0), CSS 0,0 is top-left.
+        const mapX = (player.position.x + MAP_SIZE/2) * MINIMAP_SCALE;
+        const mapZ = (player.position.z + MAP_SIZE/2) * MINIMAP_SCALE;
+        mapP.style.left = mapX + 'px';
+        mapP.style.top = mapZ + 'px';
+
+        // Update Data Dots di Peta
+        mapDots.forEach(d => {
+            const dX = (d.mesh.position.x + MAP_SIZE/2) * MINIMAP_SCALE;
+            const dZ = (d.mesh.position.z + MAP_SIZE/2) * MINIMAP_SCALE;
+            d.dotEl.style.left = dX + 'px';
+            d.dotEl.style.top = dZ + 'px';
+        });
+
+        // Flashlight 'E' Anti-Spam
+        if(keys['KeyE'] && canToggle) {
+            const on = flashLight.intensity > 0;
+            flashLight.intensity = on ? 0 : 18;
+            battery -= 1; // Cost to toggle
+            canToggle = false; setTimeout(()=>canToggle=true, 300);
         }
 
         if(flashLight.intensity > 0) {
-            battery -= 0.01;
+            battery -= 0.02;
             document.getElementById('bat').innerText = Math.floor(battery);
             if(battery <= 0) flashLight.intensity = 0;
         }
 
-        // Ambil Item
+        // Pickup Data
         items.forEach((it, i) => {
             it.rotation.y += 0.05;
             if(player.position.distanceTo(it.position) < 1.5) {
                 scene.remove(it); items.splice(i, 1);
                 dataFound++; document.getElementById('dc').innerText = dataFound;
+                
+                // Hapus dot di peta
+                const dotIdx = mapDots.findIndex(d => d.mesh === it);
+                if(dotIdx !== -1) {
+                    mapDots[dotIdx].dotEl.remove();
+                    mapDots.splice(dotIdx, 1);
+                }
             }
         });
 
-        // Enemy AI
+        // Enemy AI (Stalker with Red Eyes)
         if(enemyActive) {
+            enemy.lookAt(player.position); // Selalu hadap player
             const dist = player.position.distanceTo(enemy.position);
             const eDir = new THREE.Vector3().subVectors(player.position, enemy.position).normalize();
-            enemy.position.add(eDir.multiplyScalar(0.04));
+            
+            // Speed scaling based on data found
+            let eSpeed = 0.035 + (dataFound * 0.01);
+            enemy.position.add(eDir.multiplyScalar(eSpeed));
+            
             document.getElementById('bpm').innerText = Math.floor(70 + (10/dist)*30);
-            if(dist < 1.3) {
+            
+            if(dist < 1.4) {
                 isDead = true;
                 document.getElementById('jumpscare').style.display = 'flex';
                 setTimeout(() => location.reload(), 3000);
