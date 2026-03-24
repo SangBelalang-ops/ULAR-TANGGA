@@ -2,193 +2,167 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>SQUAD SHOWDOWN V14 - CHARACTER SELECTION</title>
+    <title>SQUAD SHOWDOWN V15 - FULL ANIMATION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; user-select: none; }
-        #game-area { width: 100vw; height: 100vh; background: linear-gradient(0deg, #050505 0%, #111 100%); display: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
+        #game-area { width: 100vw; height: 100vh; background: #111; display: none; overflow: hidden; position: relative; }
         #floor { position: absolute; bottom: 0; width: 100%; height: 60px; background: #222; border-top: 4px solid #0f0; }
-        
-        /* SELECTION UI */
+
+        /* HUD */
+        #hud { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 10; }
+        .hp-bar { width: 300px; height: 20px; background: #444; border: 2px solid #fff; }
+        .hp-fill { height: 100%; width: 100%; transition: 0.2s; }
+
+        /* SELECTION */
         #selector { position: absolute; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .char-grid { display: flex; gap: 20px; margin-top: 30px; }
-        .char-card { width: 150px; padding: 15px; border: 2px solid #444; text-align: center; cursor: pointer; transition: 0.3s; }
-        .char-card:hover { border-color: #00d4ff; transform: scale(1.1); background: rgba(0,212,255,0.1); }
-        .char-card h3 { margin: 10px 0; font-size: 14px; }
+        .btn { padding: 15px 30px; border: 2px solid #00d4ff; background: none; color: #00d4ff; cursor: pointer; margin: 10px; font-family: inherit; }
+        .btn:hover { background: #00d4ff; color: #000; }
+
+        /* STICKMAN ANATOMY */
+        .stickman { position: absolute; bottom: 60px; width: 60px; height: 120px; transition: left 0.05s linear; }
+        .part { position: absolute; background: currentColor; border-radius: 10px; transform-origin: top center; }
         
-        /* BATTLE UI */
-        #hud { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around; pointer-events: none; }
-        .hp-box { width: 350px; height: 25px; background: #333; border: 2px solid #fff; position: relative; }
-        .hp-fill { height: 100%; width: 100%; transition: 0.3s; }
-        #p-hp { background: #00d4ff; box-shadow: 0 0 15px #00d4ff; }
-        #e-hp { background: #ff0000; box-shadow: 0 0 15px #ff0000; }
+        .s-head { width: 25px; height: 25px; border: 3px solid; border-radius: 50%; top: 0; left: 17.5px; background: none !important; }
+        .s-body { width: 4px; height: 45px; top: 28px; left: 28px; }
+        .s-arm { width: 3px; height: 35px; top: 30px; }
+        .s-leg { width: 4px; height: 40px; top: 70px; }
         
-        /* STICKMAN BASE */
-        .stickman { position: absolute; bottom: 60px; width: 40px; height: 100px; }
-        .head { width: 25px; height: 25px; border: 3px solid; border-radius: 50%; margin: 0 auto; }
-        .body-line { width: 4px; height: 40px; background: currentColor; margin: 0 auto; }
+        .arm-l { left: 28px; transform: rotate(20deg); }
+        .arm-r { left: 28px; transform: rotate(-20deg); }
+        .leg-l { left: 28px; transform: rotate(15deg); }
+        .leg-r { left: 28px; transform: rotate(-15deg); }
+
+        /* ANIMATIONS */
+        .punching .arm-r { animation: punchAnim 0.2s; }
+        .kicking .leg-r { animation: kickAnim 0.3s; }
         
-        /* SPECIAL EFFECTS */
-        #fx-layer { position: absolute; inset: 0; pointer-events: none; }
-        .msg { position: absolute; top: 100px; width: 100%; text-align: center; font-size: 40px; font-weight: 900; opacity: 0; }
+        @keyframes punchAnim { 0% { transform: rotate(-20deg); } 50% { transform: rotate(-90deg) scaleY(1.5); } 100% { transform: rotate(-20deg); } }
+        @keyframes kickAnim { 0% { transform: rotate(-15deg); } 50% { transform: rotate(-80deg) scaleY(1.4); } 100% { transform: rotate(-15deg); } }
+        
+        .hit-effect { position: absolute; color: yellow; font-weight: bold; font-size: 20px; animation: hitFade 0.4s forwards; }
+        @keyframes hitFade { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
     </style>
 </head>
 <body>
 
 <div id="selector">
-    <h1 style="color:#00d4ff">CHOOSE YOUR SQUAD HERO</h1>
-    <div class="char-grid">
-        <div class="char-card" onclick="pick('FLAUST', '#00d4ff')">
-            <div style="color:#00d4ff">⚡</div>
-            <h3>FLAUST</h3>
-            <small>Speed: 10<br>Power: 7</small>
-        </div>
-        <div class="char-card" onclick="pick('IRON_ADM', '#aaa')">
-            <div style="color:#aaa">🛡️</div>
-            <h3>IRON ADM</h3>
-            <small>Speed: 5<br>Power: 12</small>
-        </div>
-        <div class="char-card" onclick="pick('RE_OK', '#f1c40f')">
-            <div style="color:#f1c40f">🎸</div>
-            <h3>RE-OK</h3>
-            <small>Speed: 8<br>Power: 9</small>
-        </div>
-        <div class="char-card" onclick="pick('VINLESS', '#9b59b6')">
-            <div style="color:#9b59b6">👻</div>
-            <h3>VINLESS</h3>
-            <small>Speed: 12<br>Power: 6</small>
-        </div>
-        <div class="char-card" onclick="pick('PHAN_TOM', '#2ecc71')">
-            <div style="color:#2ecc71">📈</div>
-            <h3>PHAN-TOM</h3>
-            <small>Speed: 7<br>Power: 10</small>
-        </div>
-    </div>
+    <h1 style="color: #00d4ff;">CHOOSE YOUR FIGHTER</h1>
+    <button class="btn" onclick="start('FLAUST', '#00d4ff')">FLAUST (Speed)</button>
+    <button class="btn" onclick="start('IRON_ADM', '#ffaa00')">IRON ADM (Power)</button>
+    <button class="btn" onclick="start('VINLESS', '#9b59b6')">VINLESS (Ninja)</button>
 </div>
 
 <div id="game-area">
     <div id="hud">
-        <div>PLAYER: <span id="p-name">?</span><div class="hp-box"><div id="p-hp" class="hp-fill"></div></div></div>
-        <div>ENEMY: TEAM MERAH<div class="hp-box"><div id="e-hp" class="hp-fill"></div></div></div>
+        <div><span id="p-label">PLAYER</span><div class="hp-bar"><div id="p-hp" class="hp-fill" style="background: #00d4ff;"></div></div></div>
+        <div><span>TEAM MERAH</span><div class="hp-bar"><div id="e-hp" class="hp-fill" style="background: #ff0000;"></div></div></div>
     </div>
-    <div id="fx-layer"></div>
     <div id="floor"></div>
-    
+
     <div id="player" class="stickman">
-        <div class="head"></div>
-        <div class="body-line"></div>
+        <div class="part s-head"></div>
+        <div class="part s-body"></div>
+        <div class="part s-arm arm-l"></div>
+        <div class="part s-arm arm-r"></div>
+        <div class="part s-leg leg-l"></div>
+        <div class="part s-leg leg-r"></div>
     </div>
-    
-    <div id="enemy" class="stickman" style="color:red; right:100px;">
-        <div class="head" style="border-color:red"></div>
-        <div class="body-line" style="background:red"></div>
+
+    <div id="enemy" class="stickman" style="color: red;">
+        <div class="part s-head"></div>
+        <div class="part s-body"></div>
+        <div class="part s-arm arm-l"></div>
+        <div class="part s-arm arm-r"></div>
+        <div class="part s-leg leg-l"></div>
+        <div class="part s-leg leg-r"></div>
     </div>
 </div>
 
 <script>
-    const config = {
-        FLAUST: { speed: 9, power: 8, color: '#00d4ff', special: 'STUN' },
-        IRON_ADM: { speed: 5, power: 15, color: '#aaa', special: 'SHIELD' },
-        RE_OK: { speed: 8, power: 10, color: '#f1c40f', special: 'AOE' },
-        VINLESS: { speed: 12, power: 7, color: '#9b59b6', special: 'DASH' },
-        PHAN_TOM: { speed: 7, power: 12, color: '#2ecc71', special: 'BURN' }
-    };
-
-    let pChar = null, pPos = 100, ePos = 800;
+    let playerPos = 100, enemyPos = 600;
     let pHp = 100, eHp = 100;
-    let keys = {}, isAttacking = false;
+    let keys = {}, isAction = false, stats = { speed: 7, power: 10 };
 
-    window.pick = (name, color) => {
-        pChar = config[name];
-        document.getElementById('p-name').innerText = name;
-        document.getElementById('player').style.color = color;
-        document.getElementById('player').querySelector('.head').style.borderColor = color;
-        document.getElementById('player').querySelector('.body-line').style.background = color;
+    window.start = (name, col) => {
+        document.getElementById('p-label').innerText = name;
+        document.getElementById('player').style.color = col;
         document.getElementById('selector').style.display = 'none';
         document.getElementById('game-area').style.display = 'block';
-        gameLoop();
+        if(name === 'VINLESS') stats = { speed: 11, power: 7 };
+        if(name === 'IRON_ADM') stats = { speed: 5, power: 15 };
+        update();
     };
 
     window.onkeydown = (e) => keys[e.code] = true;
     window.onkeyup = (e) => keys[e.code] = false;
 
-    function gameLoop() {
-        if(pHp <= 0 || eHp <= 0) return end();
-        
+    function update() {
+        if(pHp <= 0 || eHp <= 0) return alert(pHp > 0 ? "SQUAD WIN!" : "GAME OVER");
+
         // Movement
-        if(keys['ArrowLeft']) pPos -= pChar.speed;
-        if(keys['ArrowRight']) pPos += pChar.speed;
+        if(keys['ArrowLeft']) playerPos -= stats.speed;
+        if(keys['ArrowRight']) playerPos += stats.speed;
         
-        // Boundaries
-        pPos = Math.max(0, Math.min(window.innerWidth - 50, pPos));
-        document.getElementById('player').style.left = pPos + 'px';
-        document.getElementById('enemy').style.left = ePos + 'px';
+        // Attack Logic
+        if(keys['KeyZ'] && !isAction) perform('punching', 10);
+        if(keys['KeyX'] && !isAction) perform('kicking', 15);
 
-        // Attack (Z)
-        if(keys['KeyZ'] && !isAttacking) attack();
-        // Special (C)
-        if(keys['KeyC'] && !isAttacking) specialMove();
+        // AI Simple
+        if(enemyPos > playerPos + 70) enemyPos -= 3;
+        else if(enemyPos < playerPos - 70) enemyPos += 3;
+        else if(Math.random() > 0.98) enemyAttack();
 
-        // Simple AI
-        if(ePos > pPos + 60) ePos -= 3;
-        else if(ePos < pPos - 60) ePos += 3;
-        else if(Math.random() > 0.97) enemyAttack();
+        document.getElementById('player').style.left = playerPos + 'px';
+        document.getElementById('enemy').style.left = enemyPos + 'px';
+        document.getElementById('enemy').style.transform = playerPos > enemyPos ? 'scaleX(-1)' : 'scaleX(1)';
 
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(update);
     }
 
-    function attack() {
-        isAttacking = true;
+    function perform(type, dmg) {
+        isAction = true;
         const p = document.getElementById('player');
-        p.style.transform = 'skewX(-20deg) scale(1.2)';
+        p.classList.add(type);
         
-        // Hitbox check
-        if(Math.abs(pPos - ePos) < 80) {
-            eHp -= pChar.power;
+        // Hit detection
+        if(Math.abs(playerPos - enemyPos) < 90) {
+            eHp -= dmg;
             document.getElementById('e-hp').style.width = eHp + "%";
-            showFx("HIT!", "orange");
+            spawnHit(enemyPos);
+            shake();
         }
-        
+
         setTimeout(() => {
-            p.style.transform = '';
-            isAttacking = false;
-        }, 200);
-    }
-
-    function specialMove() {
-        isAttacking = true;
-        showFx(pChar.special + " ACTIVATED!", pChar.color);
-        
-        if(pChar.special === 'STUN') ePos += 0; // Enemy stuck logic
-        if(pChar.special === 'DASH') pPos += 200;
-        if(pChar.special === 'BURN') eHp -= 20;
-
-        document.getElementById('e-hp').style.width = eHp + "%";
-        setTimeout(() => isAttacking = false, 1000);
+            p.classList.remove(type);
+            isAction = false;
+        }, 250);
     }
 
     function enemyAttack() {
-        if(Math.abs(ePos - pPos) < 80) {
-            pHp -= 10;
+        const e = document.getElementById('enemy');
+        e.classList.add('punching');
+        if(Math.abs(playerPos - enemyPos) < 90) {
+            pHp -= 8;
             document.getElementById('p-hp').style.width = pHp + "%";
-            document.getElementById('player').style.filter = 'brightness(5) saturate(2)';
-            setTimeout(() => document.getElementById('player').style.filter = '', 100);
+            spawnHit(playerPos);
         }
+        setTimeout(() => e.classList.remove('punching'), 200);
     }
 
-    function showFx(txt, col) {
-        const layer = document.getElementById('fx-layer');
-        const d = document.createElement('div');
-        d.className = 'msg';
-        d.innerText = txt;
-        d.style.color = col;
-        d.style.opacity = 1;
-        layer.appendChild(d);
-        setTimeout(() => d.remove(), 500);
+    function spawnHit(x) {
+        const hit = document.createElement('div');
+        hit.className = 'hit-effect';
+        hit.innerText = 'POW!';
+        hit.style.left = x + 'px';
+        hit.style.bottom = '150px';
+        document.getElementById('game-area').appendChild(hit);
+        setTimeout(() => hit.remove(), 400);
     }
 
-    function end() {
-        alert(pHp > 0 ? "SQUAD WIN!" : "TEAM MERAH WIN!");
-        location.reload();
+    function shake() {
+        const area = document.getElementById('game-area');
+        area.style.transform = `translate(${Math.random()*10}px, ${Math.random()*10}px)`;
+        setTimeout(() => area.style.transform = '', 50);
     }
 </script>
 </body>
